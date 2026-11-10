@@ -71,7 +71,7 @@ function showLogin(){
     sessionStorage.setItem('pendingCode', c); return c;
   };
   $('#si').onclick=async()=>{ if(!checkCode()) return; const {error}=await sb.auth.signInWithPassword({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; load(); };
-  $('#su').onclick=async()=>{ if(!checkCode()) return; const {data,error}=await sb.auth.signUp({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; toast(data.session?'Account created — linking your code…':'Check your email to confirm, then sign in with your code.'); if(data.session) load(); };
+  $('#su').onclick=async()=>{ if(!checkCode()) return; const {data,error}=await sb.auth.signUp({email:$('#e').value.trim(),password:$('#p').value, options:{emailRedirectTo:'https://shakarrr89.github.io/new-hub/'}}); if(error) return $('#msg').textContent=error.message; toast(data.session?'Account created — linking your code…':'Account created! Check your email to confirm, then sign in with your code. If the email link opens localhost, ask HR to fix Site URL in Supabase (see below) or HR can Auto-Confirm you in Dashboard.'); if(data.session) load(); };
 }
 async function load(){
   const {data:{user}}=await sb.auth.getUser(); if(!user) return showLogin();
@@ -147,13 +147,14 @@ $('#link').onclick=async()=>{
 $('#skip').onclick=()=>{ employee={full_name:user.email.split('@')[0],employee_code:'—',city:'Erbil',dept:'Ops',position:'Employee',status:'Active',accrual:0,taken:0,remaining:0}; refreshData().then(shell); };
 }
 function balances(emp){
+  const carry=+emp.carryover||0;
   const acc=+emp.accrual||0;
-  const initialTaken=+emp.taken_offset||0;
+  const initialTaken=+emp.taken_offset||0; // past vacations from Google Sheet (June 2025 - now)
   const approvedTaken=allLeaves.filter(x=>(x.employee_id===emp.id||x.employee_code===emp.employee_code)&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0);
   const taken=initialTaken+approvedTaken;
-  const total=acc;
+  const total=carry+acc;
   const rem=Math.max(0,total-taken);
-  return {carry:0,acc,taken,total,rem,pct:total?Math.round(taken/total*100):0};
+  return {carry,acc,taken,total,rem,pct:total?Math.round(taken/total*100):0};
 }
 async function refreshData(){
   const q=await sb.from('employees').select('*').order('full_name'); employees=q.data||[];
@@ -208,16 +209,29 @@ function dashboardHTML(){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:18px">
   <div class="card stat anim" data-v="my"><div class="small">Remaining</div><div class="kpi-num">${b.rem} <span style="font-size:16px">days</span></div><div class="bar" style="margin-top:10px"><i style="width:${100-b.pct}%"></i></div><div class="small" style="margin-top:8px">${b.taken} taken of ${b.total} total</div></div>
   <div class="card stat anim2"><div class="small">Taken</div><div class="kpi-num">${b.taken} <span style="font-size:16px">days</span></div><p class="small">Approved vacations this year</p></div>
-  <div class="card stat anim3"><div class="small">Accrual</div><div class="kpi-num">${b.acc} <span style="font-size:16px">days</span></div><p class="small">Accrual ${b.acc}</p></div>
+  <div class="card stat anim3"><div class="small">Carryover + Accrual</div><div class="kpi-num">${b.total} <span style="font-size:16px">days</span></div><p class="small">Carryover ${b.carry} + Accrual ${b.acc}</p></div>
   <div class="card stat anim3"><div class="small">My requests</div><div class="kpi-num">${leaves.length}</div><p class="small">${myPending} pending • ${leaves.filter(x=>x.status==='approved').length} approved</p></div></div>
   <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:14px" class="anim2">
   <div class="card"><h3 style="margin:0">My vacations</h3><p class="small">Your approved & pending requests — automatically from your employee code.</p>${leaves.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid #f1f1f1"><span><b>${esc(x.leave_type)}</b> • ${fmtD(x.start_date)} – ${fmtD(x.end_date)} • ${daysBetween(x.start_date,x.end_date)}d</span><span class="pill ${x.status}">${x.status}</span></div>`).join('')||'<p class="small">No requests yet. Click + New request.</p>'}</div>
-  <div class="card"><h3 style="margin:0">Balance proof</h3><p style="background:#fefce8;border:1px solid #fde68a;padding:12px;border-radius:12px;font-size:13px">✅ <b>${esc(employee?.full_name||'')}: Accrual ${b.acc} − Taken ${b.taken} = Remaining ${b.rem}</b><br><span class="small">Remaining is already net of Taken. Total entitlement: ${b.total} days.</span></p><p class="small">Sick remaining: ${Math.max(0,10 - allLeaves.filter(x=>x.employee_id===employee?.id&&x.leave_type==='Sick'&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0))} days (example policy)</p></div></div></div>`;
+  <div class="card"><h3 style="margin:0">Balance proof</h3><p style="background:#fefce8;border:1px solid #fde68a;padding:12px;border-radius:12px;font-size:13px">✅ <b>${esc(employee?.full_name||'')}: Carryover ${b.carry} + Accrual ${b.acc} − Taken ${b.taken} = Remaining ${b.rem}</b><br><span class="small">Remaining is already net of Taken. Total entitlement: ${b.total} days.</span></p><p class="small">Sick remaining: ${Math.max(0,10 - allLeaves.filter(x=>x.employee_id===employee?.id&&x.leave_type==='Sick'&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0))} days (example policy)</p></div></div></div>`;
 }
 function myHTML(){
   const b=balances(employee||{});
+  const pastTaken=+employee?.taken_offset||0;
+  const pastCarry=+employee?.carryover||0;
+  const historyLeaves=[...leaves].sort((a,b)=> (b.start_date||'').localeCompare(a.start_date||''));
   return `<div class="anim"><h1 class="serif" style="font-size:36px;margin:0">My Vacations</h1><p class="small">Linked to <b>${esc(employee?.full_name||'')}</b> • Code <b>${esc(employee?.employee_code||'')}</b> • Remaining <b>${b.rem} days</b></p>
-  <div class="card" style="margin-top:16px"><table><tr><th>Type</th><th>Dates</th><th>Days</th><th>Status</th><th>Reason</th></tr>${leaves.map(x=>`<tr><td><b>${esc(x.leave_type)}</b></td><td>${fmtD(x.start_date)} – ${fmtD(x.end_date)}</td><td>${daysBetween(x.start_date,x.end_date)}</td><td><span class="pill ${x.status}">${x.status}</span></td><td>${esc(x.reason||'')}</td></tr>`).join('')||'<tr><td colspan=5>No vacations yet.</td></tr>'}</table></div></div>`;
+  <div class="card" style="margin-top:16px;border:1px solid #fde68a;background:#fefce8"><h3 style="margin:0">📅 Vacation History — June 2025 → Now</h3>
+  <p class="small" style="margin:6px 0 10px">From your Google Sheet + this app. Formula: <b>Carryover ${pastCarry} + Accrual ${b.acc} − Taken ${b.taken} = Remaining ${b.rem}</b></p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+    <div style="background:#fff;padding:10px;border-radius:10px"><div class="small">Carryover</div><b>${pastCarry} days</b></div>
+    <div style="background:#fff;padding:10px;border-radius:10px"><div class="small">Accrual</div><b>${b.acc} days</b></div>
+    <div style="background:#fff;padding:10px;border-radius:10px"><div class="small">Past Taken (Sheet, Jun 2025→now)</div><b>${pastTaken} days</b></div>
+    <div style="background:#fff;padding:10px;border-radius:10px"><div class="small">New Requests Taken</div><b>${(b.taken-pastTaken).toFixed(1)} days</b></div>
+    <div style="background:#fff;padding:10px;border-radius:10px"><div class="small">Remaining</div><b>${b.rem} days</b></div>
+  </div>
+  <p class="small" style="margin:10px 0 0">Past vacations from the sheet are counted as <b>${pastTaken} days</b> taken. Below are your individual requests in this app (newest first). If a past vacation from the sheet is missing below, it is still counted in the total above.</p></div>
+  <div class="card" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">All Requests</h3><span class="small">${historyLeaves.length} requests • Sorted newest → oldest</span></div><table style="margin-top:10px"><tr><th>Type</th><th>Dates</th><th>Days</th><th>Status</th><th>Reason</th></tr>${historyLeaves.map(x=>`<tr><td><b>${esc(x.leave_type)}</b></td><td>${fmtD(x.start_date)} – ${fmtD(x.end_date)}</td><td>${daysBetween(x.start_date,x.end_date)}</td><td><span class="pill ${x.status}">${x.status}</span></td><td>${esc(x.reason||'')}</td></tr>`).join('')||'<tr><td colspan=5>No vacations yet.</td></tr>'}</table></div></div>`;
 }
 function teamHTML(){
   const list=employees.filter(e=>(filterCity==='All'||e.city===filterCity)&&((e.full_name+' '+e.employee_code+' '+(e.dept||'')).toLowerCase().includes(search.toLowerCase())));
@@ -241,7 +255,7 @@ function newEmpHTML(){
   <div><label class="small">City</label><select id="n_city"><option>Erbil</option><option>Mosul</option><option>Kirkuk</option><option>Duhok</option><option>Sulaymaniyah</option></select></div>
   <div><label class="small">Department</label><input id="n_dept" value="Ops"></div>
   
-  <div><label class="small">Accrual (days)</label><input id="n_acc" type="number" value="17"></div></div>
+  <div><label class="small">Carryover (days)</label><input id="n_carry" type="number" value="0"></div><div><label class="small">Accrual (days)</label><input id="n_acc" type="number" value="17"></div></div>
   <label class="small">Temporary password to tell him (he can change later)</label><input id="n_pass" placeholder="e.g. Wade2026!" style="margin-top:6px">
   <button class="btn-primary" id="createEmp" style="width:100%;margin-top:16px">Create employee →</button>
   <div class="small" id="cmsg" style="margin-top:10px"></div>
@@ -255,7 +269,7 @@ function bindView(){
   const ce=$('#createEmp'); if(ce) ce.onclick=async()=>{
     const name=$('#n_name').value.trim(), code=$('#n_code').value.trim().toUpperCase(), email=$('#n_email').value.trim();
     if(!name||!code||!email) return $('#cmsg').textContent='Name, code and email are required.';
-    const {data,error}=await sb.from('employees').insert({full_name:name,employee_code:code,email,position:$('#n_pos').value, city:$('#n_city').value, dept:$('#n_dept').value, accrual:+$('#n_acc').value||0, status:'Active'}).select().single();
+    const {data,error}=await sb.from('employees').insert({full_name:name,employee_code:code,email,position:$('#n_pos').value, city:$('#n_city').value, dept:$('#n_dept').value, carryover:+$('#n_carry').value||0, accrual:+$('#n_acc').value||0, status:'Active'}).select().single();
     if(error) return $('#cmsg').textContent=error.message;
     // Try to create auth account in background - if email confirmation is on, employee can still sign up themselves with same email
     toast(`Employee ${name} (${code}) created! Tell him to sign up with ${email}`);
