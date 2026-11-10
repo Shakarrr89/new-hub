@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TipTop — Ops Leave | Work Hub</title>
+<title>Wade — Wade Leave | Work Hub</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,900&display=swap" rel="stylesheet">
 <style>
@@ -53,11 +53,11 @@ function showLogin(){
   // CODE-FIRST: code is REQUIRED before sign-in. Stored in sessionStorage.
   const savedCode = sessionStorage.getItem('pendingCode')||'';
   app.innerHTML=`<div class="login-wrap"><div class="login-card">
-  <div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:Fraunces;font-size:24px;font-weight:900">O</div><div><b style="font-size:18px">Ops Leave</b><div class="small">TipTop • Operations Team</div></div></div>
+  <div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:Fraunces;font-size:24px;font-weight:900">O</div><div><b style="font-size:18px">Wade Leave</b><div class="small">Wade • Operations Team</div></div></div>
   <h1 class="serif" style="font-size:30px;margin:18px 0 4px">Welcome back.</h1>
   <p class="small"><b style="color:#111">Step 1 — Employee code is required.</b><br>Enter your code first (e.g. ERB-243). We link your vacations to this code. Without it you cannot sign in.</p>
   <label class="small">Employee code *</label><input id="code" placeholder="ERB-___" value="${savedCode}" style="margin:6px 0 12px;text-transform:uppercase">
-  <label class="small">Work email</label><input id="e" type="email" placeholder="you@tiptop.com" style="margin:6px 0 12px">
+  <label class="small">Work email</label><input id="e" type="email" placeholder="you@wadedelivery.com" style="margin:6px 0 12px">
   <label class="small">Password</label><input id="p" type="password" placeholder="••••••••" style="margin:6px 0 16px">
   <button class="btn-primary" style="width:100%" id="si">Sign in with my code →</button>
   <button class="btn-ghost" style="width:100%;margin-top:10px" id="su">Create my account with this code</button>
@@ -120,7 +120,7 @@ async function load(){
   if(!employee){
     // HR / Admin should NEVER be blocked by the link-code screen — they need to get in to CREATE employees.
     if(me.role==='admin'||me.role==='hr'){
-      employee={id:null,full_name:me.full_name||user.email.split('@')[0],employee_code:'ADMIN',email:user.email,city:'Erbil',dept:'HR',position:'HR Admin',status:'Active',carryover:0,accrual:0};
+      employee={id:null,full_name:me.full_name||user.email.split('@')[0],employee_code:'ADMIN',email:user.email,city:'Erbil',dept:'HR',position:'HR Admin',status:'Active',accrual:0};
       await refreshData(); shell(); return;
     }
     return showLinkCode(user);
@@ -144,32 +144,33 @@ $('#link').onclick=async()=>{
   if(uErr) return $('#msg').textContent=uErr.message;
   toast('Linked! Your vacations are now showing.'); load();
 };
-$('#skip').onclick=()=>{ employee={full_name:user.email.split('@')[0],employee_code:'—',city:'Erbil',dept:'Ops',position:'Employee',status:'Active',carryover:0,accrual:0,taken:0,remaining:0}; refreshData().then(shell); };
+$('#skip').onclick=()=>{ employee={full_name:user.email.split('@')[0],employee_code:'—',city:'Erbil',dept:'Ops',position:'Employee',status:'Active',accrual:0,taken:0,remaining:0}; refreshData().then(shell); };
+}
+function balances(emp){
+  const acc=+emp.accrual||0;
+  const initialTaken=+emp.taken_offset||0;
+  const approvedTaken=allLeaves.filter(x=>(x.employee_id===emp.id||x.employee_code===emp.employee_code)&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0);
+  const taken=initialTaken+approvedTaken;
+  const total=acc;
+  const rem=Math.max(0,total-taken);
+  return {carry:0,acc,taken,total,rem,pct:total?Math.round(taken/total*100):0};
 }
 async function refreshData(){
   const q=await sb.from('employees').select('*').order('full_name'); employees=q.data||[];
   const lq=await sb.from('leave_requests').select('*,employees(full_name,employee_code)').order('created_at',{ascending:false}); allLeaves=lq.data||[];
-  // PRIVACY: employee sees ONLY his own data in the UI. Admin sees everything.
+  if(employee?.id) leaves=allLeaves.filter(x=>x.employee_id===employee.id||x.employee_code===employee.employee_code);
+  else leaves=[];
   if(!(me.role==='admin'||me.role==='hr')){
     employees = employee ? [employee] : [];
     allLeaves = allLeaves.filter(x=>x.employee_id===employee?.id || x.employee_code===employee?.employee_code);
   }
-  // My leaves: by employee_id if present, else by code/email
-  if(employee?.id) leaves=allLeaves.filter(x=>x.employee_id===employee.id||x.employee_code===employee.employee_code);
-  else leaves=[];
-}
-function balances(emp){
-  const carry=+emp.carryover||0, acc=+emp.accrual||0;
-  const taken=allLeaves.filter(x=>(x.employee_id===emp.id||x.employee_code===emp.employee_code)&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0);
-  const total=carry+acc, rem=Math.max(0,total-taken);
-  return {carry,acc,taken,total,rem, pct: total?Math.round(taken/total*100):0};
 }
 function shell(){
   const b=employee?balances(employee):{carry:0,acc:0,taken:0,total:0,rem:0,pct:0};
   const isAdmin=(me.role==='admin'||me.role==='hr');
   const pending=allLeaves.filter(x=>x.status==='pending').length;
   app.innerHTML=`<div class="layout">
-  <aside id="side"><div style="display:flex;gap:10px;align-items:center;padding:4px 6px 18px"><div style="width:38px;height:38px;border-radius:12px;background:#fff;color:var(--navy);display:grid;place-items:center;font-family:Fraunces;font-size:22px;font-weight:900">O</div><div><b>Ops Leave</b><div style="font-size:11px;color:#bfdbfe">Operations Team</div></div></div>
+  <aside id="side"><div style="display:flex;gap:10px;align-items:center;padding:4px 6px 18px"><div style="width:38px;height:38px;border-radius:12px;background:#fff;color:var(--navy);display:grid;place-items:center;font-family:Fraunces;font-size:22px;font-weight:900">O</div><div><b>Wade Leave</b><div style="font-size:11px;color:#bfdbfe">Operations Team</div></div></div>
   ${isAdmin
     ? `<button class="navbtn ${view==='dashboard'?'active':''}" data-v="dashboard">🏠 Dashboard</button>
   <button class="navbtn ${view==='my'?'active':''}" data-v="my">🌴 My Vacations</button>
@@ -207,11 +208,11 @@ function dashboardHTML(){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:18px">
   <div class="card stat anim" data-v="my"><div class="small">Remaining</div><div class="kpi-num">${b.rem} <span style="font-size:16px">days</span></div><div class="bar" style="margin-top:10px"><i style="width:${100-b.pct}%"></i></div><div class="small" style="margin-top:8px">${b.taken} taken of ${b.total} total</div></div>
   <div class="card stat anim2"><div class="small">Taken</div><div class="kpi-num">${b.taken} <span style="font-size:16px">days</span></div><p class="small">Approved vacations this year</p></div>
-  <div class="card stat anim3"><div class="small">Carryover + Accrual</div><div class="kpi-num">${b.carry} + ${b.acc}</div><p class="small">Carryover ${b.carry} • Accrual ${b.acc}</p></div>
+  <div class="card stat anim3"><div class="small">Accrual</div><div class="kpi-num">${b.acc} <span style="font-size:16px">days</span></div><p class="small">Accrual ${b.acc}</p></div>
   <div class="card stat anim3"><div class="small">My requests</div><div class="kpi-num">${leaves.length}</div><p class="small">${myPending} pending • ${leaves.filter(x=>x.status==='approved').length} approved</p></div></div>
   <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:14px" class="anim2">
   <div class="card"><h3 style="margin:0">My vacations</h3><p class="small">Your approved & pending requests — automatically from your employee code.</p>${leaves.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid #f1f1f1"><span><b>${esc(x.leave_type)}</b> • ${fmtD(x.start_date)} – ${fmtD(x.end_date)} • ${daysBetween(x.start_date,x.end_date)}d</span><span class="pill ${x.status}">${x.status}</span></div>`).join('')||'<p class="small">No requests yet. Click + New request.</p>'}</div>
-  <div class="card"><h3 style="margin:0">Balance proof</h3><p style="background:#fefce8;border:1px solid #fde68a;padding:12px;border-radius:12px;font-size:13px">✅ <b>${esc(employee?.full_name||'')}: Carryover ${b.carry} + Accrual ${b.acc} − Taken ${b.taken} = Remaining ${b.rem}</b><br><span class="small">Remaining is already net of Taken. Total entitlement: ${b.total} days.</span></p><p class="small">Sick remaining: ${Math.max(0,10 - allLeaves.filter(x=>x.employee_id===employee?.id&&x.leave_type==='Sick'&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0))} days (example policy)</p></div></div></div>`;
+  <div class="card"><h3 style="margin:0">Balance proof</h3><p style="background:#fefce8;border:1px solid #fde68a;padding:12px;border-radius:12px;font-size:13px">✅ <b>${esc(employee?.full_name||'')}: Accrual ${b.acc} − Taken ${b.taken} = Remaining ${b.rem}</b><br><span class="small">Remaining is already net of Taken. Total entitlement: ${b.total} days.</span></p><p class="small">Sick remaining: ${Math.max(0,10 - allLeaves.filter(x=>x.employee_id===employee?.id&&x.leave_type==='Sick'&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0))} days (example policy)</p></div></div></div>`;
 }
 function myHTML(){
   const b=balances(employee||{});
@@ -235,13 +236,13 @@ function newEmpHTML(){
   <div class="card" style="margin-top:16px;max-width:680px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
   <div><label class="small">Full name *</label><input id="n_name" placeholder="e.g. Shakar Kamal"></div>
   <div><label class="small">Employee code *</label><input id="n_code" placeholder="ERB-243" style="text-transform:uppercase"></div>
-  <div><label class="small">Email * (for login)</label><input id="n_email" type="email" placeholder="name@tiptop.com"></div>
+  <div><label class="small">Email * (for login)</label><input id="n_email" type="email" placeholder="name@wade.com"></div>
   <div><label class="small">Position</label><input id="n_pos" placeholder="Driver / Ops"></div>
   <div><label class="small">City</label><select id="n_city"><option>Erbil</option><option>Mosul</option><option>Kirkuk</option><option>Duhok</option><option>Sulaymaniyah</option></select></div>
   <div><label class="small">Department</label><input id="n_dept" value="Ops"></div>
-  <div><label class="small">Carryover (days)</label><input id="n_carry" type="number" value="0"></div>
+  
   <div><label class="small">Accrual (days)</label><input id="n_acc" type="number" value="17"></div></div>
-  <label class="small">Temporary password to tell him (he can change later)</label><input id="n_pass" placeholder="e.g. TipTop2026!" style="margin-top:6px">
+  <label class="small">Temporary password to tell him (he can change later)</label><input id="n_pass" placeholder="e.g. Wade2026!" style="margin-top:6px">
   <button class="btn-primary" id="createEmp" style="width:100%;margin-top:16px">Create employee →</button>
   <div class="small" id="cmsg" style="margin-top:10px"></div>
   <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:12px;margin-top:14px;font-size:13px"><b>How it works:</b> 1) You create him here → 2) He opens the site, clicks <b>Create my account</b> with that email + this password → 3) We auto-match his email / code → 4) He instantly sees his balance & vacations. No manual linking.</div></div></div>`;
@@ -254,7 +255,7 @@ function bindView(){
   const ce=$('#createEmp'); if(ce) ce.onclick=async()=>{
     const name=$('#n_name').value.trim(), code=$('#n_code').value.trim().toUpperCase(), email=$('#n_email').value.trim();
     if(!name||!code||!email) return $('#cmsg').textContent='Name, code and email are required.';
-    const {data,error}=await sb.from('employees').insert({full_name:name,employee_code:code,email,position:$('#n_pos').value, city:$('#n_city').value, dept:$('#n_dept').value, carryover:+$('#n_carry').value||0, accrual:+$('#n_acc').value||0, status:'Active'}).select().single();
+    const {data,error}=await sb.from('employees').insert({full_name:name,employee_code:code,email,position:$('#n_pos').value, city:$('#n_city').value, dept:$('#n_dept').value, accrual:+$('#n_acc').value||0, status:'Active'}).select().single();
     if(error) return $('#cmsg').textContent=error.message;
     // Try to create auth account in background - if email confirmation is on, employee can still sign up themselves with same email
     toast(`Employee ${name} (${code}) created! Tell him to sign up with ${email}`);
@@ -265,7 +266,7 @@ function bindView(){
 function openEmpModal(e){
   const b=balances(e); const hist=allLeaves.filter(x=>x.employee_id===e.id||x.employee_code===e.employee_code);
   const m=document.createElement('div'); m.className='modal'; m.innerHTML=`<div><div style="display:flex;justify-content:space-between"><h2 class="serif" style="font-size:24px;margin:0">${esc(e.full_name)}</h2><button class="btn-ghost" id="cx">✕</button></div><p class="small">${esc(e.employee_code)} • ${esc(e.position||'')} • ${esc(e.city||'')} • ${esc(e.dept||'')}</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"><div class="card"><div class="small">Remaining</div><b style="font-size:22px">${b.rem} days</b></div><div class="card"><div class="small">Taken</div><b style="font-size:22px">${b.taken} days</b></div><div class="card"><div class="small">Carryover</div><b>${b.carry} days</b></div><div class="card"><div class="small">Total entitlement</div><b>${b.total} days</b></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"><div class="card"><div class="small">Remaining</div><b style="font-size:22px">${b.rem} days</b></div><div class="card"><div class="small">Taken</div><b style="font-size:22px">${b.taken} days</b></div><div class="card"><div class="small"></div><b>${b.carry} days</b></div><div class="card"><div class="small">Total entitlement</div><b>${b.total} days</b></div></div>
   <h3 style="margin-top:16px">Leave history</h3>${hist.map(x=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #eee"><span>${esc(x.leave_type)} • ${fmtD(x.start_date)} – ${fmtD(x.end_date)}</span><span class="pill ${x.status}">${x.status}</span></div>`).join('')||'<p class="small">No leave history yet.</p>'}</div>`;
   document.body.appendChild(m); m.onclick=e2=>{if(e2.target===m) m.remove()}; m.querySelector('#cx').onclick=()=>m.remove();
 }
