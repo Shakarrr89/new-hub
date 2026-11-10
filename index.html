@@ -73,8 +73,24 @@ async function load(){
   let {data:emp}=await sb.from('employees').select('*').or(`email.eq.${user.email},auth_user_id.eq.${user.id}`).maybeSingle();
   employee=emp||null;
   // If linked employee exists but not yet linked to auth, link it
+  // LINK-FIX: if first lookup missed (e.g. email case), try case-insensitive email lookup
+  if(!employee){
+    const {data:emp2} = await sb.from('employees').select('*').ilike('email', user.email).maybeSingle();
+    if(emp2){ employee = emp2; }
+  }
   if(employee && !employee.auth_user_id){ await sb.from('employees').update({auth_user_id:user.id}).eq('id',employee.id); }
-  if(!employee){ return showLinkCode(user); }
+  if(employee && employee.email && employee.email.toLowerCase()!==user.email.toLowerCase()){
+    // keep email in sync so next login links instantly
+    await sb.from('employees').update({email:user.email}).eq('id',employee.id);
+  }
+  if(!employee){
+    // HR / Admin should NEVER be blocked by the link-code screen — they need to get in to CREATE employees.
+    if(me.role==='admin'||me.role==='hr'){
+      employee={id:null,full_name:me.full_name||user.email.split('@')[0],employee_code:'ADMIN',email:user.email,city:'Erbil',dept:'HR',position:'HR Admin',status:'Active',carryover:0,accrual:0};
+      await refreshData(); shell(); return;
+    }
+    return showLinkCode(user);
+  }
   await refreshData(); shell();
 }
 function showLinkCode(user){
@@ -89,7 +105,7 @@ app.innerHTML=`<div class="login-wrap"><div class="login-card anim">
 $('#link').onclick=async()=>{
   const code=$('#code').value.trim().toUpperCase(); if(!code) return;
   const {data:emp,error}=await sb.from('employees').select('*').eq('employee_code',code).maybeSingle();
-  if(error||!emp) return $('#msg').textContent='Code not found. Check with your admin — it must match exactly, e.g. ERB-243';
+  if(error||!emp) return $('#msg').textContent='Code not found in employees table. ERB-243 is only an EXAMPLE — your admin must first create you in Team → New employee with your real code, then you enter that exact code here.';
   const {error:uErr}=await sb.from('employees').update({auth_user_id:user.id,email:user.email}).eq('id',emp.id);
   if(uErr) return $('#msg').textContent=uErr.message;
   toast('Linked! Your vacations are now showing.'); load();
@@ -141,7 +157,7 @@ function renderView(){
 }
 function dashboardHTML(){
   const b=balances(employee||{}); const myPending=leaves.filter(x=>x.status==='pending').length;
-  return `<div class="anim"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:end"><div><h1 class="serif" style="font-size:38px;margin:0">Hello, ${esc((employee?.full_name||'').split(' ')[0]||'there')} 👋</h1><p class="small">${esc(employee?.position||'Employee')} • ${esc(employee?.employee_code||'')} • ${esc(employee?.city||'')} • ${esc(employee?.dept||'')}</p></div><button class="btn-primary" onclick="document.getElementById('newreq').click()">+ New request</button></div>
+  return `<div class="anim"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:end"><div><h1 class="serif" style="font-size:38px;margin:0">Hello, ${esc((employee?.full_name||'').split(' ')[0]||'there')} 👋</h1><p class="small">LINKED-BADGE ${employee?.id ? '✅ LINKED: '+esc(employee.employee_code)+' • '+esc(employee.email||'') : '⚠️ NOT LINKED — no employee record'} • ${esc(employee?.position||'Employee')} • ${esc(employee?.employee_code||'')} • ${esc(employee?.city||'')} • ${esc(employee?.dept||'')}</p></div><button class="btn-primary" onclick="document.getElementById('newreq').click()">+ New request</button></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:18px">
   <div class="card stat anim" data-v="my"><div class="small">Remaining</div><div class="kpi-num">${b.rem} <span style="font-size:16px">days</span></div><div class="bar" style="margin-top:10px"><i style="width:${100-b.pct}%"></i></div><div class="small" style="margin-top:8px">${b.taken} taken of ${b.total} total</div></div>
   <div class="card stat anim2"><div class="small">Taken</div><div class="kpi-num">${b.taken} <span style="font-size:16px">days</span></div><p class="small">Approved vacations this year</p></div>
