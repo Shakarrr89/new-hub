@@ -26,16 +26,16 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const ok=({error})=>{if(error){alert(error.message);return false}return true};
 const today=()=>new Date().toLocaleDateString('en-CA');
 const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
-let sb,me,tab='datasets',cfg=JSON.parse(localStorage.getItem('hubcfg')||'null');
+let sb,me,tab='datasets';
+// PASTE YOUR KEYS HERE - ONLY THESE 2 LINES
+const cfg={url:"https://txbqpxrwqyjpotsmphxl.supabase.co",key:"sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus-"};
+// Example url: https://xxxx.supabase.co - Use ANON key only, NEVER service_role
 
-function setup(){app.innerHTML=`<div class="box card"><h2>Connect Supabase</h2><p>Project Settings → API. Use the anon key only.</p>
-<input id=u placeholder="Project URL https://xxxx.supabase.co"><input id=k placeholder="anon public key">
-<button class=p id=go>Save</button></div>`;
-$('#go').onclick=()=>{localStorage.setItem('hubcfg',JSON.stringify({url:$('#u').value.trim().replace(/\/(rest|auth)\/.*$|\/+$/,''),key:$('#k').value.trim()}));location.reload()}}
+function setup(){app.innerHTML=`<div class="box card"><h2>Setup needed</h2><p>Supabase keys are not set yet in index.html.</p><p>Edit index.html and replace https://txbqpxrwqyjpotsmphxl.supabase.co and sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus- with your real Project URL and anon public key from Supabase > Project Settings -> API.</p></div>`}
 
 function login(){app.innerHTML=`<div class="box card"><h2>Work Hub</h2><input id=e type=email placeholder=Email><input id=p type=password placeholder=Password>
-<div class=row><button class=p id=si>Sign in</button><button id=su>Sign up</button></div><small><a href="#" id=rs>Change Supabase keys</a></small></div>`;
-$('#rs').onclick=()=>{localStorage.removeItem('hubcfg');location.reload()};
+<div class=row><button class=p id=si>Sign in</button><button id=su>Sign up</button></div><small>Work Hub</small></div>`;
+
 $('#si').onclick=async()=>{if(ok(await sb.auth.signInWithPassword({email:$('#e').value,password:$('#p').value})))load()};
 $('#su').onclick=async()=>{const r=await sb.auth.signUp({email:$('#e').value,password:$('#p').value});if(ok(r)){r.data.session?load():alert('Check your email to confirm, then sign in.')}}}
 
@@ -100,6 +100,6 @@ ${L.map(r=>`<tr>${isA?`<td>${esc(r.profiles?.email)}</td>`:''}<td>${esc(r.leave_
 $('#lb').onclick=async()=>{if(ok(await sb.from('leave_requests').insert({leave_type:$('#lt').value,start_date:$('#ls').value,end_date:$('#le').value,reason:$('#lr').value})))vLeave()};
 document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(ok(await sb.from('leave_requests').update({status:b.dataset.s,decided_by:me.id,decided_at:new Date().toISOString()}).eq('id',b.dataset.d)))vLeave()})}
 
-(async()=>{if(!cfg)return setup();sb=supabase.createClient(cfg.url,cfg.key);
+(async()=>{if(!cfg||!cfg.url||cfg.url.includes('https://txbqpxrwqyjpotsmphxl.supabase.co')||!cfg.key||cfg.key.includes('sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus-'))return setup();sb=supabase.createClient(cfg.url,cfg.key);
 const{data:{session}}=await sb.auth.getSession();session?load():login()})();
 </script></body></html>
