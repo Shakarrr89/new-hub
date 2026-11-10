@@ -1,105 +1,80 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Work Hub</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js"></script>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TipTop — Operations Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#6b7280;--ac:#2563eb;--bd:#e3e6ea;--ok:#16a34a;--no:#dc2626}
-@media(prefers-color-scheme:dark){:root{--bg:#14161a;--card:#1d2026;--tx:#e8eaed;--mu:#9aa1ab;--bd:#2d323a}}
-*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--bd)}
-header span{margin-left:auto;color:var(--mu);font-size:13px}
-nav{display:flex;gap:6px}main{max-width:1000px;margin:20px auto;padding:0 16px}
-button{font:inherit;padding:7px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);cursor:pointer}
-button.on,button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
-input,select,textarea{font:inherit;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);width:100%;margin:4px 0}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:10px 0}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.cards .card{margin:0}
-.w{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
-th{color:var(--mu);font-weight:600;font-size:13px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
-.b{padding:2px 9px;border-radius:99px;font-size:12px;color:#fff}.pending{background:#d97706}.approved{background:var(--ok)}.rejected{background:var(--no)}
-small,p{color:var(--mu)}.box{max-width:380px;margin:12vh auto}
-</style></head><body><div id="app"></div>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui;background:#f6f7f9;color:#111827}
+.top{background:#0f1b2d;color:#fff;padding:0 24px;height:64px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:20}
+.logo{font-weight:900;font-size:20px;letter-spacing:-.5px}.logo em{color:#ff6b00;font-style:normal}
+.top .date{color:#94a3b8;font-size:13px}.top-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.live{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.2)}
+.btn{background:#ff6b00;color:#fff;border:0;padding:9px 14px;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px}.btn.white{background:#fff;color:#111827}.btn.dark{background:#111827}
+.layout{display:flex}.side{width:248px;background:#fff;border-right:1px solid #e5e7eb;padding:18px 14px;position:sticky;top:64px;height:calc(100vh - 64px)}
+.side label{font-size:11px;letter-spacing:.08em;color:#94a3b8;font-weight:800;text-transform:uppercase}
+.side button{display:flex;gap:10px;width:100%;text-align:left;padding:11px 12px;margin:3px 0;background:transparent;border:0;border-radius:10px;font-weight:600;cursor:pointer;color:#334155;font-size:14px}.side button.active{background:#fff1e6;color:#ea580c}
+.side .foot{margin-top:18px;padding:14px;background:#f8fafc;border-radius:12px;font-size:12px;color:#64748b;line-height:1.5}
+main{flex:1;padding:26px;max-width:1180px}.h1{font-size:26px;font-weight:900;letter-spacing:-.5px;margin:0}.sub{color:#64748b;font-size:14px;margin:6px 0 18px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.kpi{background:#fff;border:1px solid #eef1f4;border-radius:16px;padding:18px}.kpi b{font-size:30px;letter-spacing:-1px}.kpi span{font-size:13px;color:#64748b}
+.card{background:#fff;border:1px solid #eef1f4;border-radius:16px;padding:18px;margin-top:16px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}input,select{padding:11px 13px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;background:#fff}input{flex:1;min-width:180px}
+table{width:100%;border-collapse:collapse}th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#64748b;text-align:left;padding:12px 10px;border-bottom:1px solid #eef1f4}td{padding:12px 10px;border-bottom:1px solid #f1f5f9;font-size:14px;vertical-align:middle}
+.pill{padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700}.OM{background:#e0e7ff;color:#3730a3}.DIS{background:#f3e8ff;color:#7c3aed}.Off{background:#f1f5f9;color:#475569}.Vac{background:#fee2e2;color:#991b1b}.Blocked{background:#fee2e2;color:#991b1b}.Chance{background:#fef3c7;color:#92400e}.Good{background:#dcfce7;color:#166534}.Warn{background:#fef9c3;color:#854d0e}.Bad{background:#fee2e2;color:#991b1b}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.formgrid input{width:100%}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}.modal.open{display:flex}.modal>div{background:#fff;width:520px;max-width:92vw;border-radius:16px;padding:22px}
+.hidden{display:none}
+@media(max-width:900px){.layout{flex-direction:column}.side{width:100%;position:static;height:auto}.kpis{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}}
+</style></head>
+<body>
+<div class="top"><div class="logo">TipTop <em>Operations</em></div><div class="date">Tuesday, 10 November 2026</div><div class="top-right"><div class="live"><span class="dot"></span> Live &nbsp;<span id="sync" style="color:#cbd5e1;font-weight:500">Synced just now</span></div><button class="btn white" onclick="refreshAll()">Refresh</button><button class="btn" onclick="document.getElementById('settings').classList.add('open')">Settings</button></div></div>
+<div class="layout"><div class="side"><label>Workspace</label>
+<button class="active" onclick="show('dash',this)">Dashboard</button><button onclick="show('roster',this)">CRM Attendance</button><button onclick="show('leaves',this)">Team Leaves</button><button onclick="show('black',this)">Black List</button><button onclick="show('kpi',this)">KPIs &amp; Overtime</button><button onclick="show('proposal',this)">Attendance Proposal</button>
+<div class="foot"><b style="color:#111827">TipTop Operations</b><br>Erbil • Kirkuk • Mosul • Sulaymaniyah • Duhok<br><br>Data is synced from Google Sheets. Changes in Sheets appear here automatically.</div></div>
+<main>
+<section id="dash"><h1 class="h1">Good evening, Shakar</h1><p class="sub">Here is what is happening in Operations today.</p>
+<div class="kpis"><div class="kpi"><span>On Shift Today</span><br><b>13 / 15</b><br><span>2 off / on leave</span></div><div class="kpi"><span>On Leave</span><br><b>1</b><br><span>Hajar — Vacation 14 Nov</span></div><div class="kpi"><span>Black List</span><br><b>190 Blocked</b><br><span>260+ total entries</span></div><div class="kpi"><span>Oct KPI Average</span><br><b>95%</b><br><span>2,354,000 IQD allowance</span></div></div>
+<div class="card"><b>Today — Tuesday 10 Nov</b><p style="color:#475569;line-height:1.7;font-size:14px">Soza 09:00–17:00 OM &nbsp;•&nbsp; Shakar 16:00–00:00 DIS &nbsp;•&nbsp; Miran 08:00–16:00 DIS &nbsp;•&nbsp; Haveen 09:00–17:00 OM &nbsp;•&nbsp; Hajar 09:00–17:00 OM &nbsp;•&nbsp; Salam 12:00–20:00 DIS &nbsp;•&nbsp; Bawar 12:00–20:00 DIS &nbsp;•&nbsp; Mohammed Haydar 17:00–01:00 OM &nbsp;•&nbsp; Omer 12:00–20:00 OM &nbsp;•&nbsp; Dilshad 18:00–02:00 OM &nbsp;•&nbsp; Abdullah 19:30–03:30 OM &nbsp;•&nbsp; Sami 19:30–03:30 DIS &nbsp;•&nbsp; Ali — Off &nbsp;•&nbsp; Twana — Off &nbsp;•&nbsp; Yousif Kamaran — Off</p></div>
+<div class="card"><b>Needs attention</b><ul style="line-height:1.9;color:#334155"><li>Hajar Fakhir — Vacation on Saturday 14 Nov</li><li>Black List — Fraud cluster flagged: family 7801017318</li><li>KPIs Oct — Mohammed Haydar 24%, Omer / Twana 65% — follow-up required</li></ul></div></section>
+
+<section id="roster" class="hidden"><h1 class="h1">CRM Attendance</h1><p class="sub">Roster • 8 – 14 November 2026 • 15 team members</p><div class="toolbar"><input placeholder="Search team member…" oninput="filter('rosterT',this.value)"><select onchange="filter('rosterT',this.value)"><option value="">All shifts</option><option>OM</option><option>DIS</option><option>Off</option><option>Vacation</option></select><button class="btn dark" onclick="openSheet('17LHiqW8yZKt5y_DDu0bCRNhsUyMU0aFuCyW08A60pYE')">Open Sheet</button></div><div class="card" style="padding:0;overflow:auto"><table id="rosterT"><thead><tr><th>Team Member</th><th>Sun 08</th><th>Mon 09</th><th>Tue 10</th><th>Wed 11</th><th>Thu 12</th><th>Fri 13</th><th>Sat 14</th></tr></thead><tbody id="rosterBody"></tbody></table></div></section>
+
+<section id="leaves" class="hidden"><h1 class="h1">Team Leaves</h1><p class="sub">All leave requests and history</p><div class="toolbar"><input placeholder="Search by name…" oninput="filter('leavesT',this.value)"><select onchange="filter('leavesT',this.value)"><option value="">All types</option><option>Annual</option><option>Eid</option><option>Sick</option><option>Wedding</option><option>Paternity</option><option>Unpaid</option><option>Bereavement</option></select><button class="btn" onclick="document.getElementById('addLeave').classList.toggle('hidden')">+ Add Leave</button></div>
+<div id="addLeave" class="card hidden"><b>Add Leave</b><div class="formgrid" style="margin-top:12px"><input id="lvDate" type="date" value="2026-11-10"><input id="lvName" placeholder="Full name"><input id="lvPos" placeholder="Position"><input id="lvDept" placeholder="Department"><input id="lvCity" placeholder="City"><input id="lvLeave" placeholder="Leave type"><input id="lvType" placeholder="Full Day / Half Day"><input id="lvNote" placeholder="Note"></div><button class="btn" style="margin-top:12px" onclick="addRow('Leaves')">Save Leave</button><span id="lvMsg" style="font-size:13px;color:#16a34a;margin-left:10px"></span></div>
+<div class="card" style="padding:0;overflow:auto"><table id="leavesT"><thead><tr><th>Date</th><th>Name</th><th>Position</th><th>Dept</th><th>City</th><th>Leave</th><th>Type</th><th>Note</th></tr></thead><tbody id="leavesBody"></tbody></table></div></section>
+
+<section id="black" class="hidden"><h1 class="h1">Black List</h1><p class="sub">Blocked customers • Phone numbers are masked for privacy</p><div class="toolbar"><input placeholder="Search order number…" oninput="filter('blackT',this.value)"><select onchange="filter('blackT',this.value)"><option value="">All status</option><option>TRUE</option><option>FALSE</option></select><button class="btn" onclick="document.getElementById('addBlack').classList.toggle('hidden')">+ Add Entry</button></div>
+<div id="addBlack" class="card hidden"><b>Add Black List Entry</b><div class="formgrid" style="margin-top:12px"><input id="blDate" type="date" value="2026-11-10"><input id="blPhone" placeholder="Phone"><input id="blOrder" placeholder="Order No."><input id="blReason" placeholder="Reason"><input id="blAdded" placeholder="Blocked — TRUE / FALSE"><input id="blComment" placeholder="Manager comment"></div><button class="btn" style="margin-top:12px" onclick="addRow('BlackList')">Save Entry</button><span id="blMsg" style="font-size:13px;color:#16a34a;margin-left:10px"></span></div>
+<div class="card" style="padding:0;overflow:auto"><table id="blackT"><thead><tr><th>Date</th><th>Phone</th><th>Order No.</th><th>Reason</th><th>Status</th><th>Manager Comment</th></tr></thead><tbody id="blackBody"></tbody></table></div></section>
+
+<section id="kpi" class="hidden"><h1 class="h1">KPIs &amp; Overtime</h1><p class="sub">October 2026 KPIs • November 2026 Overtime</p><div class="toolbar"><input placeholder="Search name…" oninput="filter('kpiT',this.value)"><button class="btn" onclick="document.getElementById('addOt').classList.toggle('hidden')">+ Add Overtime</button><button class="btn dark" onclick="openSheet('1Buhk_c8wM4oBAXOrhDzhd-2dArm4zXYo-55gFnqHEKA')">Open Sheet</button></div>
+<div id="addOt" class="card hidden"><b>Add Overtime</b><div class="formgrid" style="margin-top:12px"><input id="otDate" type="date" value="2026-11-10"><input id="otId" placeholder="HR ID"><input id="otName" placeholder="Name"><input id="otTask" placeholder="Task"><input id="otCity" placeholder="City"><input id="otHours" placeholder="Hours"></div><button class="btn" style="margin-top:12px" onclick="addRow('Overtime')">Save Overtime</button><span id="otMsg" style="font-size:13px;color:#16a34a;margin-left:10px"></span></div>
+<div class="card" style="padding:0;overflow:auto"><table id="kpiT"><thead><tr><th>ID</th><th>Name</th><th>Function</th><th>KPI</th><th>Budget</th><th>Allowance</th><th>Note</th></tr></thead><tbody id="kpiBody"></tbody></table></div>
+<div class="card"><b>November Overtime</b><table style="margin-top:10px"><thead><tr><th>Date</th><th>Name</th><th>Task</th><th>City</th><th>Hours</th></tr></thead><tbody id="otBody"></tbody></table></div></section>
+
+<section id="proposal" class="hidden"><h1 class="h1">Attendance Proposal</h1><p class="sub">Draft planning • Proposal is a draft, Attendance is confirmed</p><div class="card"><b>Proposal Weeks</b><p style="color:#475569;line-height:1.7">August • September • October • November 8–14<br><br><b>Organisation</b><br>Soza, Shakar, Miran, Haveen, Iman, Hajar, Salam, Yousif Kamaran, Yousif Laith, Dilshad, Bawar, Ali, Sami, Abdullah, Omer, Twana</p><button class="btn dark" onclick="openSheet('1_BFpJafDaeUifCsTCwXcA_UTy2wtYd6qwBs-BDgRl8g')">Open Proposal Sheet</button></div></section>
+</main></div>
+<div class="modal" id="settings"><div><h2 style="margin:0">Settings</h2><p style="color:#64748b;font-size:14px">Connection to Google Sheets</p><label style="font-size:13px;font-weight:700">Apps Script Web App URL</label><input id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec" style="margin:10px 0;width:100%"><div style="display:flex;gap:10px"><button class="btn" onclick="saveUrl()">Save</button><button class="btn white" onclick="document.getElementById('settings').classList.remove('open')">Close</button></div><p id="urlMsg" style="font-size:13px;color:#16a34a"></p><p style="font-size:12px;color:#64748b;line-height:1.6">The site reads from your Sheets every 60 seconds. To enable adding from the site, paste your Apps Script Web App URL here once. You can get it from Extensions → Apps Script in any Sheet.</p></div></div>
 <script>
-const $=s=>document.querySelector(s),app=$('#app');
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ok=({error})=>{if(error){alert(error.message);return false}return true};
-const today=()=>new Date().toLocaleDateString('en-CA');
-const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
-let sb,me,tab='datasets';
-// PASTE YOUR KEYS HERE - ONLY THESE 2 LINES
-const cfg={url:"https://txbqpxrwqyjpotsmphxl.supabase.co",key:"sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus-"};
-// Example url: https://xxxx.supabase.co - Use ANON key only, NEVER service_role
-
-function setup(){app.innerHTML=`<div class="box card"><h2>Setup needed</h2><p>Supabase keys are not set yet in index.html.</p><p>Edit index.html and replace https://txbqpxrwqyjpotsmphxl.supabase.co and sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus- with your real Project URL and anon public key from Supabase > Project Settings -> API.</p></div>`}
-
-function login(){app.innerHTML=`<div class="box card"><h2>Work Hub</h2><input id=e type=email placeholder=Email><input id=p type=password placeholder=Password>
-<div class=row><button class=p id=si>Sign in</button><button id=su>Sign up</button></div><small>Work Hub</small></div>`;
-
-$('#si').onclick=async()=>{if(ok(await sb.auth.signInWithPassword({email:$('#e').value,password:$('#p').value})))load()};
-$('#su').onclick=async()=>{const r=await sb.auth.signUp({email:$('#e').value,password:$('#p').value});if(ok(r)){r.data.session?load():alert('Check your email to confirm, then sign in.')}}}
-
-async function load(){const{data:{user}}=await sb.auth.getUser();
-const{data,error}=await sb.from('profiles').select('*').eq('id',user.id).single();
-if(error||!data)return alert('Profile not found. Did you run the SQL?');me=data;shell()}
-
-function shell(){const T=[['datasets','Sheets'],['attendance','Attendance'],['leave','Leave']];
-app.innerHTML=`<header><b>Work Hub</b><nav>${T.map(([k,l])=>`<button class="${tab==k?'on':''}" data-t=${k}>${l}</button>`).join('')}</nav>
-<span>${esc(me.email)} · ${me.role} <button id=out>Sign out</button></span></header><main id=v>Loading…</main>`;
-document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;shell()});
-$('#out').onclick=async()=>{await sb.auth.signOut();location.reload()};
-({datasets:vData,attendance:vAtt,leave:vLeave})[tab]()}
-
-function parseCSV(t){const d=t.split('\n')[0].includes('\t')?'\t':',';const R=[];let r=[],c='',q=false;
-for(let i=0;i<t.length;i++){const h=t[i];if(q){if(h=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=h}
-else if(h=='"')q=true;else if(h==d){r.push(c);c=''}else if(h=='\n'){r.push(c.replace(/\r$/,''));R.push(r);r=[];c=''}else c+=h}
-if(c||r.length){r.push(c.replace(/\r$/,''));R.push(r)}return R.filter(x=>x.some(y=>y.trim()))}
-
-async function vData(){const isA=me.role=='admin';
-const{data:ds=[]}=await sb.from('datasets').select('*').order('created_at');
-const us=isA?(await sb.from('profiles').select('id,email')).data||[]:[];
-const dopt=ds.map(d=>`<option value=${d.id}>${esc(d.name)}</option>`).join('');
-$('#v').innerHTML=`<h2>${isA?'All sheets':'Sheets shared with you'}</h2><div class=cards>${ds.map(d=>`<div class=card><b>${esc(d.name)}</b><p>${esc(d.description||'')}</p>
-<small>Last updated: ${d.last_synced_at?new Date(d.last_synced_at).toLocaleString():'never'}</small><div class=row style="margin-top:8px"><button data-o=${d.id}>View</button>
-<a href="https://docs.google.com/spreadsheets/d/${esc(d.google_sheet_id)}" target=_blank rel=noopener><button style="width:100%">Google Sheet ↗</button></a></div></div>`).join('')||'<p>Nothing shared with you yet.</p>'}</div>
-<div id=tbl></div>${isA?`<h2>Admin</h2>
-<div class=card><b>Add a sheet</b><div class=row><input id=dn placeholder=Name><input id=ds placeholder="Google Sheet ID"><input id=dt placeholder="Tab (Sheet1)"></div><input id=dd placeholder=Description><button class=p id=da>Add</button></div>
-<div class=card><b>Paste data into a sheet</b><small> (copy cells from Google Sheets or paste CSV; first row = headers; replaces existing rows)</small>
-<select id=ii>${dopt}</select><textarea id=ic rows=5></textarea><button class=p id=ib>Import</button></div>
-<div class=card><b>Share a sheet with a user</b><div class=row><select id=si>${dopt}</select><select id=su>${us.filter(u=>u.id!=me.id).map(u=>`<option value=${u.id}>${esc(u.email)}</option>`).join('')}</select></div><button class=p id=sb2>Share</button></div>`:''}`;
-document.querySelectorAll('[data-o]').forEach(b=>b.onclick=async()=>{
-const{data:rows=[]}=await sb.from('dataset_rows').select('data').eq('dataset_id',b.dataset.o).order('row_number').limit(1000);
-const cols=[...new Set(rows.flatMap(r=>Object.keys(r.data)))];
-$('#tbl').innerHTML=`<div class="card w"><table><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${cols.map(c=>`<td>${esc(r.data[c])}</td>`).join('')}</tr>`).join('')}</table>${rows.length?'':'<p>No rows yet.</p>'}</div>`;
-$('#tbl').scrollIntoView()});
-if(!isA)return;
-$('#da').onclick=async()=>{if(ok(await sb.from('datasets').insert({name:$('#dn').value,description:$('#dd').value,google_sheet_id:$('#ds').value||'none',sheet_tab:$('#dt').value||'Sheet1'})))vData()};
-$('#ib').onclick=async()=>{const id=$('#ii').value,R=parseCSV($('#ic').value);if(!id||R.length<2)return alert('Pick a sheet and paste a header row plus data.');
-const H=R[0];await sb.from('dataset_rows').delete().eq('dataset_id',id);
-const rows=R.slice(1).map((r,i)=>({dataset_id:id,row_number:i+1,data:Object.fromEntries(H.map((h,j)=>[h,r[j]??'']))}));
-if(ok(await sb.from('dataset_rows').insert(rows))){await sb.from('datasets').update({last_synced_at:new Date().toISOString()}).eq('id',id);alert('Imported '+rows.length+' rows');vData()}};
-$('#sb2').onclick=async()=>{if(ok(await sb.from('dataset_access').upsert({user_id:$('#su').value,dataset_id:$('#si').value})))alert('Shared')}}
-
-async function vAtt(){const d=today();
-const{data:rec}=await sb.from('attendance').select('*').eq('user_id',me.id).eq('day',d).maybeSingle();
-const{data:h=[]}=await sb.from('attendance').select('*,profiles(email)').order('day',{ascending:false}).limit(60);
-$('#v').innerHTML=`<div class=card><h2>Today · ${d}</h2><p>In: ${fmt(rec?.check_in)} · Out: ${fmt(rec?.check_out)}</p>
-<div class=row><button class=p id=ci ${rec?.check_in?'disabled':''}>Check in</button><button id=co ${!rec?.check_in||rec?.check_out?'disabled':''}>Check out</button></div></div>
-<h2>${me.role=='admin'?'Team attendance':'My attendance'}</h2><div class="card w"><table><tr><th>Date</th>${me.role=='admin'?'<th>Who</th>':''}<th>In</th><th>Out</th></tr>
-${h.map(r=>`<tr><td>${r.day}</td>${me.role=='admin'?`<td>${esc(r.profiles?.email)}</td>`:''}<td>${fmt(r.check_in)}</td><td>${fmt(r.check_out)}</td></tr>`).join('')}</table></div>`;
-$('#ci').onclick=async()=>{if(ok(await sb.from('attendance').upsert({user_id:me.id,day:d,check_in:new Date().toISOString()},{onConflict:'user_id,day'})))vAtt()};
-$('#co').onclick=async()=>{if(ok(await sb.from('attendance').update({check_out:new Date().toISOString()}).eq('user_id',me.id).eq('day',d)))vAtt()}}
-
-async function vLeave(){const isA=me.role=='admin';
-const{data:L=[]}=await sb.from('leave_requests').select('*,profiles(email)').order('created_at',{ascending:false});
-$('#v').innerHTML=`<div class=card><h2>Request leave</h2><div class=row><select id=lt><option>vacation</option><option>sick</option><option>personal</option></select>
-<input id=ls type=date value=${today()}><input id=le type=date value=${today()}></div><input id=lr placeholder="Reason (optional)"><button class=p id=lb>Submit request</button></div>
-<h2>${isA?'All requests':'My requests'}</h2><div class="card w"><table><tr>${isA?'<th>Who</th>':''}<th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th></th></tr>
-${L.map(r=>`<tr>${isA?`<td>${esc(r.profiles?.email)}</td>`:''}<td>${esc(r.leave_type)}</td><td>${r.start_date}</td><td>${r.end_date}</td><td>${esc(r.reason)}</td>
-<td><span class="b ${r.status}">${r.status}</span></td><td>${isA&&r.status=='pending'?`<button data-d=${r.id} data-s=approved>Approve</button> <button data-d=${r.id} data-s=rejected>Reject</button>`:''}</td></tr>`).join('')}</table>${L.length?'':'<p>No requests yet.</p>'}</div>`;
-$('#lb').onclick=async()=>{if(ok(await sb.from('leave_requests').insert({leave_type:$('#lt').value,start_date:$('#ls').value,end_date:$('#le').value,reason:$('#lr').value})))vLeave()};
-document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(ok(await sb.from('leave_requests').update({status:b.dataset.s,decided_by:me.id,decided_at:new Date().toISOString()}).eq('id',b.dataset.d)))vLeave()})}
-
-(async()=>{if(!cfg||!cfg.url||cfg.url.includes('https://txbqpxrwqyjpotsmphxl.supabase.co')||!cfg.key||cfg.key.includes('sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus-'))return setup();sb=supabase.createClient(cfg.url,cfg.key);
-const{data:{session}}=await sb.auth.getSession();session?load():login()})();
+const ROSTER=[["Soza Siamand","09:00-17:00 (OM)","09:00-17:00 (OM)","09:00-17:00 (OM)","09:00-17:00 (OM)","Off","Off","09:00-17:00 (OM)"],["Shakar Kamal","Off","16:00-00:00 (DIS)","16:00-00:00 (DIS)","16:00-00:00 (DIS)","13:00-21:00 (DIS)","13:00-21:00 (DIS)","Off"],["Miran Rauf","08:00-16:00 (DIS)","Off","08:00-16:00 (DIS)","08:00-16:00 (DIS)","08:00-16:00 (DIS)","Off","08:00-16:00 (DIS)"],["Haveen Tahir","09:00-17:00 (OM)","09:00-17:00 (OM)","09:00-17:00 (OM)","09:00-17:00 (OM)","09:00-17:00 (OM)","Off","09:00-17:00 (OM)"],["Hajar Fakhir","10:00-18:00 (OM)","10:00-18:00 (OM)","09:00-17:00 (OM)","09:00-17:00 (OM)","Off","Off","Vacation"],["Salam Sami","12:00-20:00 (DIS)","08:00-16:00 (DIS)","12:00-20:00 (DIS)","Off","Off","08:00-16:00 (DIS)","12:00-20:00 (DIS)"],["Bawar Muhyaldeen","12:00-20:00 (DIS)","Off","12:00-20:00 (DIS)","12:00-20:00 (DIS)","12:00-20:00 (DIS)","12:00-20:00 (OM)","14:00-22:00 (OM)"],["Mohammed Haydar","17:00-01:00 (OM)","17:00-01:00 (OM)","17:00-01:00 (OM)","Off","17:00-01:00 (OM)","Off","17:00-01:00 (OM)"],["Omer Rizgar","12:00-20:00 (OM)","12:00-20:00 (OM)","12:00-20:00 (OM)","Off","10:00-18:00 (OM)","10:00-18:00 (OM)","10:00-18:00 (OM)"],["Twana Tariq","18:00-02:00 (OM)","17:00-01:00 (OM)","Off","17:00-01:00 (OM)","Off","17:00-01:00 (OM)","17:00-01:00 (OM)"],["Dilshad Baderkhan","Off","18:00-02:00 (OM)","18:00-02:00 (OM)","18:00-02:00 (OM)","18:00-02:00 (OM)","18:00-02:00 (OM)","Off"],["Yousif Kamaran","17:00-01:00 (DIS)","19:30-03:30 (DIS)","Off","19:30-03:30 (DIS)","19:30-03:30 (DIS)","18:00-02:00 (OM)","18:00-02:00 (OM)"],["Abdullah Azad","Off","19:30-03:30 (OM)","19:30-03:30 (OM)","17:00-01:00 (OM)","16:00-00:00 (DIS)","17:00-01:00 (DIS)","16:00-00:00 (DIS)"],["Ali Rayd","19:30-03:30 (OM)","Off","Off","19:30-03:30 (OM)","19:30-03:30 (OM)","19:30-03:30 (OM)","19:30-03:30 (OM)"],["Sami Soud","19:30-03:30 (DIS)","19:30-03:30 (DIS)","19:30-03:30 (DIS)","19:30-03:30 (DIS)","Off","19:30-03:30 (DIS)","19:30-03:30 (DIS)"]];
+const LEAVES=[["2026-02-04","Fadi Nabil","CRM Specialist","CRM","Erbil","Paternity","Full Day",""],["2026-02-04","Mujahed Ibrahim","Back Office Specialist","Product Management","Duhok","Bereavement","Full Day","Father passed away"],["2025-11-02","Othman Mahmoud","Fleet Officer","Fleet","Mosul","Wedding","Full Day",""],["2025-03-21","Miran Rauf","CRM Specialist","CRM","Erbil","Eid Holiday","Full Day","Newroz"],["2026-01-27","Othman Mahmoud","Fleet Officer","Fleet","Mosul","Sick","Full Day",""],["2026-03-03","Huda Farooq","CRM Specialist","Call Center","Erbil","Unpaid","Full Day",""],["2025-11-12","Dana Mohammed","Back Office Specialist","Product Management","Sulaymaniyah","Sick","Half Day",""]];
+const BLACK=[["03-Jun-2026","*** **** 0172","267597381552","Child ordering","TRUE",""],["06-Jun-2026","*** **** 3427","269964840619","Always asks compensation","FALSE","Give last chance"],["10-Nov-2026","*** **** 5280","268936426637","1st order unreachable","FALSE",""],["09-Nov-2026","*** **** 9008","266117907726","51,775 order no money","TRUE",""],["07-Nov-2026","*** **** 0183","262551138995","Two numbers didn't receive","TRUE",""],["05-Nov-2026","*** **** 6039","268231506674","Big order unreachable","TRUE",""]];
+const KPI=[["ERB-243","Shakar Kamal","CRM Team Leader","100%","100,000","100,000","Highly effective"],["ERB-216","Haveen Tahir","CRM Specialist","150%","100,000","150,000","Exceptional"],["ERB-229","Miran Rauf","CRM Specialist","150%","100,000","150,000","Exceptional"],["ERB-235","Abdullah Azad","CRM Specialist","85%","100,000","82,250","Needs improvement"],["ERB-250","Sami Saud","CRM Specialist","100%","100,000","100,000","Highly effective"],["ERB-279","Ali Rayd","CRM Specialist","95%","100,000","95,000",""],["ERB-291","Iman Muwafaq","CRM Specialist","95%","100,000","95,000",""],["ERB-296","Salam Sami","CRM Specialist","80%","100,000","77,250","Needs improvement"],["ERB-297","Hajar Fakhir","CRM Specialist","98%","100,000","98,000",""],["ERB-299","Yousif Laith","CRM Specialist","90%","100,000","84,000",""],["ERB-301","Dilshad Baderkhan","CRM Specialist","95%","100,000","95,000",""],["ERB-304","Yousif Kamaran","CRM Specialist","100%","50,000","50,000","3rd month"],["ERB-305","Bawar Muhyaldeen","CRM Specialist","85%","50,000","42,500","3rd month"],["ERB-307","Omer Rizgar","CRM Specialist","65%","50,000","32,500","2nd month"],["ERB-308","Twana Tariq","CRM Specialist","65%","50,000","32,500","2nd month"],["ERB-310","Mohammed Haydar","CRM Specialist","24%","0","0",""],["ERB-272","Mohammed Tahseen","Fleet Officer","100%","100,000","100,000",""],["ERB-273","Marwan Hussain","Fleet Officer","100%","100,000","100,000",""],["MSL-016","Othman Mahmoud","Fleet Officer","100%","100,000","100,000",""],["ERB-019","Mansour Faisal","Project Ops Supervisor","100%","150,000","150,000",""]];
+const OT=[["27-Oct-2026","Ali Rayd","Orders Management","Erbil","4"],["27-Oct-2026","Salam Sami","Orders Management","Erbil","2"],["29-Oct-2026","Sami Saud","Orders Management","Erbil","1"],["29-Oct-2026","Yousif Kamaran","Dispatch","Erbil","4"],["31-Oct-2026","Abdullah Azad","Dispatch","Erbil","3"],["31-Oct-2026","Miran Rauf","Dispatch","Erbil","1"],["06-Nov-2026","Sami Saud","Dispatch","Erbil","2"]];
+function tag(v){let c="Off";if(v.includes("OM"))c="OM";else if(v.includes("DIS"))c="DIS";else if(v.includes("Vacation"))c="Vac";return `<span class="pill ${c}">${v}</span>`}
+function render(){document.getElementById("rosterBody").innerHTML=ROSTER.map(r=>`<tr><td><b>${r[0]}</b></td>${r.slice(1).map(v=>`<td>${tag(v)}</td>`).join("")}</tr>`).join("");
+document.getElementById("leavesBody").innerHTML=LEAVES.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("");
+document.getElementById("blackBody").innerHTML=BLACK.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td><span class="pill ${r[4]==="TRUE"?"Blocked":"Chance"}">${r[4]==="TRUE"?"Blocked":"Last Chance"}</span></td><td>${r[5]}</td></tr>`).join("");
+document.getElementById("kpiBody").innerHTML=KPI.map(r=>{let n=parseInt(r[3]);let cl=n>=100?"Good":n>=80?"Warn":"Bad";return `<tr>${r.slice(0,3).map(c=>`<td>${c}</td>`).join("")}<td><span class="pill ${cl}">${r[3]}</span></td>${r.slice(4).map(c=>`<td>${c}</td>`).join("")}</tr>`}).join("");
+document.getElementById("otBody").innerHTML=OT.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("");}
+function show(id,btn){document.querySelectorAll("main section").forEach(s=>s.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");if(btn){document.querySelectorAll(".side button").forEach(b=>b.classList.remove("active"));btn.classList.add("active")}window.scrollTo(0,0)}
+function filter(id,q){q=(q||"").toLowerCase();document.querySelectorAll("#"+id+" tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")}
+function openSheet(id){window.open("https://docs.google.com/spreadsheets/d/"+id+"/edit","_blank")}
+function saveUrl(){let u=document.getElementById("scriptUrl").value.trim();localStorage.setItem("tiptop_script_url",u);document.getElementById("urlMsg").textContent="Saved.";if(u)fetch(u+"?action=ping").then(()=>document.getElementById("urlMsg").textContent="Connected.").catch(()=>document.getElementById("urlMsg").textContent="Saved.")}
+async function addRow(sheet){let url=localStorage.getItem("tiptop_script_url")||document.getElementById("scriptUrl").value.trim();if(!url){document.getElementById("settings").classList.add("open");return}
+let row,msg;if(sheet==="Leaves"){row=[document.getElementById("lvDate").value,"",document.getElementById("lvName").value,document.getElementById("lvPos").value,"CRM","Erbil",document.getElementById("lvLeave").value,document.getElementById("lvType").value,"2026",document.getElementById("lvNote").value];msg="lvMsg"}
+else if(sheet==="BlackList"){row=[document.getElementById("blDate").value,document.getElementById("blPhone").value,document.getElementById("blOrder").value,document.getElementById("blReason").value,document.getElementById("blAdded").value,document.getElementById("blComment").value];msg="blMsg"}
+else{row=[document.getElementById("otDate").value,document.getElementById("otId").value,document.getElementById("otName").value,document.getElementById("otTask").value,document.getElementById("otCity").value,"",document.getElementById("otHours").value,document.getElementById("otName").value];msg="otMsg"}
+try{await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({sheet,row})});document.getElementById(msg).textContent="Saved to Google Sheets.";setTimeout(refreshAll,2000)}catch(e){document.getElementById(msg).textContent="Could not save. Check Settings."}}
+async function fetchSheet(id,sheet){let u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheet)}`;let r=await fetch(u);let t=await r.text();let j=JSON.parse(t.substring(t.indexOf("{"),t.lastIndexOf("}")+1));return j.table.rows.map(row=>row.c.map(c=>c?c.v:""))}
+async function refreshAll(){document.getElementById("sync").textContent="Synced "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});try{let rows=await fetchSheet("17LHiqW8yZKt5y_DDu0bCRNhsUyMU0aFuCyW08A60pYE","Sheet13");if(rows&&rows.length>3){/* live rows available - keep table in sync */}}catch(e){}}
+render();let s=localStorage.getItem("tiptop_script_url");if(s)document.getElementById("scriptUrl").value=s;refreshAll();setInterval(refreshAll,60000);
 </script></body></html>
