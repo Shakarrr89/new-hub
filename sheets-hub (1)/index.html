@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Work Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#6b7280;--ac:#2563eb;--bd:#e3e6ea;--ok:#16a34a;--no:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--card:#1d2026;--tx:#e8eaed;--mu:#9aa1ab;--bd:#2d323a}}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--bd)}
+header span{margin-left:auto;color:var(--mu);font-size:13px}
+nav{display:flex;gap:6px}main{max-width:1000px;margin:20px auto;padding:0 16px}
+button{font:inherit;padding:7px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);cursor:pointer}
+button.on,button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+input,select,textarea{font:inherit;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);width:100%;margin:4px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:10px 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.cards .card{margin:0}
+.w{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
+th{color:var(--mu);font-weight:600;font-size:13px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+.b{padding:2px 9px;border-radius:99px;font-size:12px;color:#fff}.pending{background:#d97706}.approved{background:var(--ok)}.rejected{background:var(--no)}
+small,p{color:var(--mu)}.box{max-width:380px;margin:12vh auto}
+</style></head><body><div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ok=({error})=>{if(error){alert(error.message);return false}return true};
+const today=()=>new Date().toLocaleDateString('en-CA');
+const fmt=t=>t?new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+let sb,me,tab='datasets',cfg=JSON.parse(localStorage.getItem('hubcfg')||'null');
+
+function setup(){app.innerHTML=`<div class="box card"><h2>Connect Supabase</h2><p>Project Settings → API. Use the anon key only.</p>
+<input id=u placeholder="Project URL https://xxxx.supabase.co"><input id=k placeholder="anon public key">
+<button class=p id=go>Save</button></div>`;
+$('#go').onclick=()=>{localStorage.setItem('hubcfg',JSON.stringify({url:$('#u').value.trim().replace(/\/(rest|auth)\/.*$|\/+$/,''),key:$('#k').value.trim()}));location.reload()}}
+
+function login(){app.innerHTML=`<div class="box card"><h2>Work Hub</h2><input id=e type=email placeholder=Email><input id=p type=password placeholder=Password>
+<div class=row><button class=p id=si>Sign in</button><button id=su>Sign up</button></div><small><a href="#" id=rs>Change Supabase keys</a></small></div>`;
+$('#rs').onclick=()=>{localStorage.removeItem('hubcfg');location.reload()};
+$('#si').onclick=async()=>{if(ok(await sb.auth.signInWithPassword({email:$('#e').value,password:$('#p').value})))load()};
+$('#su').onclick=async()=>{const r=await sb.auth.signUp({email:$('#e').value,password:$('#p').value});if(ok(r)){r.data.session?load():alert('Check your email to confirm, then sign in.')}}}
+
+async function load(){const{data:{user}}=await sb.auth.getUser();
+const{data,error}=await sb.from('profiles').select('*').eq('id',user.id).single();
+if(error||!data)return alert('Profile not found. Did you run the SQL?');me=data;shell()}
+
+function shell(){const T=[['datasets','Sheets'],['attendance','Attendance'],['leave','Leave']];
+app.innerHTML=`<header><b>Work Hub</b><nav>${T.map(([k,l])=>`<button class="${tab==k?'on':''}" data-t=${k}>${l}</button>`).join('')}</nav>
+<span>${esc(me.email)} · ${me.role} <button id=out>Sign out</button></span></header><main id=v>Loading…</main>`;
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;shell()});
+$('#out').onclick=async()=>{await sb.auth.signOut();location.reload()};
+({datasets:vData,attendance:vAtt,leave:vLeave})[tab]()}
+
+function parseCSV(t){const d=t.split('\n')[0].includes('\t')?'\t':',';const R=[];let r=[],c='',q=false;
+for(let i=0;i<t.length;i++){const h=t[i];if(q){if(h=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=h}
+else if(h=='"')q=true;else if(h==d){r.push(c);c=''}else if(h=='\n'){r.push(c.replace(/\r$/,''));R.push(r);r=[];c=''}else c+=h}
+if(c||r.length){r.push(c.replace(/\r$/,''));R.push(r)}return R.filter(x=>x.some(y=>y.trim()))}
+
+async function vData(){const isA=me.role=='admin';
+const{data:ds=[]}=await sb.from('datasets').select('*').order('created_at');
+const us=isA?(await sb.from('profiles').select('id,email')).data||[]:[];
+const dopt=ds.map(d=>`<option value=${d.id}>${esc(d.name)}</option>`).join('');
+$('#v').innerHTML=`<h2>${isA?'All sheets':'Sheets shared with you'}</h2><div class=cards>${ds.map(d=>`<div class=card><b>${esc(d.name)}</b><p>${esc(d.description||'')}</p>
+<small>Last updated: ${d.last_synced_at?new Date(d.last_synced_at).toLocaleString():'never'}</small><div class=row style="margin-top:8px"><button data-o=${d.id}>View</button>
+<a href="https://docs.google.com/spreadsheets/d/${esc(d.google_sheet_id)}" target=_blank rel=noopener><button style="width:100%">Google Sheet ↗</button></a></div></div>`).join('')||'<p>Nothing shared with you yet.</p>'}</div>
+<div id=tbl></div>${isA?`<h2>Admin</h2>
+<div class=card><b>Add a sheet</b><div class=row><input id=dn placeholder=Name><input id=ds placeholder="Google Sheet ID"><input id=dt placeholder="Tab (Sheet1)"></div><input id=dd placeholder=Description><button class=p id=da>Add</button></div>
+<div class=card><b>Paste data into a sheet</b><small> (copy cells from Google Sheets or paste CSV; first row = headers; replaces existing rows)</small>
+<select id=ii>${dopt}</select><textarea id=ic rows=5></textarea><button class=p id=ib>Import</button></div>
+<div class=card><b>Share a sheet with a user</b><div class=row><select id=si>${dopt}</select><select id=su>${us.filter(u=>u.id!=me.id).map(u=>`<option value=${u.id}>${esc(u.email)}</option>`).join('')}</select></div><button class=p id=sb2>Share</button></div>`:''}`;
+document.querySelectorAll('[data-o]').forEach(b=>b.onclick=async()=>{
+const{data:rows=[]}=await sb.from('dataset_rows').select('data').eq('dataset_id',b.dataset.o).order('row_number').limit(1000);
+const cols=[...new Set(rows.flatMap(r=>Object.keys(r.data)))];
+$('#tbl').innerHTML=`<div class="card w"><table><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${cols.map(c=>`<td>${esc(r.data[c])}</td>`).join('')}</tr>`).join('')}</table>${rows.length?'':'<p>No rows yet.</p>'}</div>`;
+$('#tbl').scrollIntoView()});
+if(!isA)return;
+$('#da').onclick=async()=>{if(ok(await sb.from('datasets').insert({name:$('#dn').value,description:$('#dd').value,google_sheet_id:$('#ds').value||'none',sheet_tab:$('#dt').value||'Sheet1'})))vData()};
+$('#ib').onclick=async()=>{const id=$('#ii').value,R=parseCSV($('#ic').value);if(!id||R.length<2)return alert('Pick a sheet and paste a header row plus data.');
+const H=R[0];await sb.from('dataset_rows').delete().eq('dataset_id',id);
+const rows=R.slice(1).map((r,i)=>({dataset_id:id,row_number:i+1,data:Object.fromEntries(H.map((h,j)=>[h,r[j]??'']))}));
+if(ok(await sb.from('dataset_rows').insert(rows))){await sb.from('datasets').update({last_synced_at:new Date().toISOString()}).eq('id',id);alert('Imported '+rows.length+' rows');vData()}};
+$('#sb2').onclick=async()=>{if(ok(await sb.from('dataset_access').upsert({user_id:$('#su').value,dataset_id:$('#si').value})))alert('Shared')}}
+
+async function vAtt(){const d=today();
+const{data:rec}=await sb.from('attendance').select('*').eq('user_id',me.id).eq('day',d).maybeSingle();
+const{data:h=[]}=await sb.from('attendance').select('*,profiles(email)').order('day',{ascending:false}).limit(60);
+$('#v').innerHTML=`<div class=card><h2>Today · ${d}</h2><p>In: ${fmt(rec?.check_in)} · Out: ${fmt(rec?.check_out)}</p>
+<div class=row><button class=p id=ci ${rec?.check_in?'disabled':''}>Check in</button><button id=co ${!rec?.check_in||rec?.check_out?'disabled':''}>Check out</button></div></div>
+<h2>${me.role=='admin'?'Team attendance':'My attendance'}</h2><div class="card w"><table><tr><th>Date</th>${me.role=='admin'?'<th>Who</th>':''}<th>In</th><th>Out</th></tr>
+${h.map(r=>`<tr><td>${r.day}</td>${me.role=='admin'?`<td>${esc(r.profiles?.email)}</td>`:''}<td>${fmt(r.check_in)}</td><td>${fmt(r.check_out)}</td></tr>`).join('')}</table></div>`;
+$('#ci').onclick=async()=>{if(ok(await sb.from('attendance').upsert({user_id:me.id,day:d,check_in:new Date().toISOString()},{onConflict:'user_id,day'})))vAtt()};
+$('#co').onclick=async()=>{if(ok(await sb.from('attendance').update({check_out:new Date().toISOString()}).eq('user_id',me.id).eq('day',d)))vAtt()}}
+
+async function vLeave(){const isA=me.role=='admin';
+const{data:L=[]}=await sb.from('leave_requests').select('*,profiles(email)').order('created_at',{ascending:false});
+$('#v').innerHTML=`<div class=card><h2>Request leave</h2><div class=row><select id=lt><option>vacation</option><option>sick</option><option>personal</option></select>
+<input id=ls type=date value=${today()}><input id=le type=date value=${today()}></div><input id=lr placeholder="Reason (optional)"><button class=p id=lb>Submit request</button></div>
+<h2>${isA?'All requests':'My requests'}</h2><div class="card w"><table><tr>${isA?'<th>Who</th>':''}<th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th></th></tr>
+${L.map(r=>`<tr>${isA?`<td>${esc(r.profiles?.email)}</td>`:''}<td>${esc(r.leave_type)}</td><td>${r.start_date}</td><td>${r.end_date}</td><td>${esc(r.reason)}</td>
+<td><span class="b ${r.status}">${r.status}</span></td><td>${isA&&r.status=='pending'?`<button data-d=${r.id} data-s=approved>Approve</button> <button data-d=${r.id} data-s=rejected>Reject</button>`:''}</td></tr>`).join('')}</table>${L.length?'':'<p>No requests yet.</p>'}</div>`;
+$('#lb').onclick=async()=>{if(ok(await sb.from('leave_requests').insert({leave_type:$('#lt').value,start_date:$('#ls').value,end_date:$('#le').value,reason:$('#lr').value})))vLeave()};
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(ok(await sb.from('leave_requests').update({status:b.dataset.s,decided_by:me.id,decided_at:new Date().toISOString()}).eq('id',b.dataset.d)))vLeave()})}
+
+(async()=>{if(!cfg)return setup();sb=supabase.createClient(cfg.url,cfg.key);
+const{data:{session}}=await sb.auth.getSession();session?load():login()})();
+</script></body></html>
