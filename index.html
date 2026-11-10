@@ -1,98 +1,232 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TipTop — CRM Vacation</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui;background:#f4f6f9;color:#0f172a}
-.top{background:#0f1b2d;color:#fff;padding:0 22px;height:62px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}.logo{font-weight:900;font-size:20px}.logo em{color:#ff6b00;font-style:normal}
-.btn{background:#ff6b00;color:#fff;border:0;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer}.btn.dark{background:#0f1b2d}.btn.white{background:#fff;color:#111827;border:1px solid #e2e8f0}.btn.green{background:#16a34a}.btn.red{background:#dc2626}
-.layout{display:flex}.side{width:240px;background:#fff;border-right:1px solid #e5e7eb;padding:16px;position:sticky;top:62px;height:calc(100vh - 62px)} .side button{display:block;width:100%;text-align:left;padding:11px 12px;margin:3px 0;background:transparent;border:0;border-radius:10px;font-weight:600;cursor:pointer;color:#334155}.side button.active{background:#fff1e6;color:#ea580c}
-main{flex:1;padding:24px;max-width:1100px}.card{background:#fff;border:1px solid #eef1f4;border-radius:16px;padding:18px;margin-top:14px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.kpi{background:#fff;border-radius:16px;padding:18px;border:1px solid #eef1f4}.kpi b{font-size:28px}
-input,select,textarea{padding:11px 12px;border:1px solid #e2e8f0;border-radius:10px;width:100%;font-size:14px}label{font-size:12px;font-weight:700;color:#475569}
-table{width:100%;border-collapse:collapse}th{font-size:11px;text-transform:uppercase;color:#64748b;text-align:left;padding:11px;border-bottom:1px solid #eef1f4}td{padding:11px;border-bottom:1px solid #f1f5f9;font-size:14px}
-.pill{padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700}.Pending{background:#fef9c3;color:#854d0e}.Approved{background:#dcfce7;color:#166534}.Rejected{background:#fee2e2;color:#991b1b}.Probation{background:#fef3c7;color:#92400e}.Passed{background:#dcfce7;color:#166534}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hidden{display:none}
-.login{max-width:400px;margin:70px auto;background:#fff;border-radius:20px;padding:28px;box-shadow:0 10px 40px rgba(0,0,0,.1)}
-.bar{height:10px;background:#eef2f7;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;background:#ff6b00}
-@media(max-width:900px){.layout{flex-direction:column}.side{width:100%;position:static;height:auto}.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
-</style></head><body>
-<div id="loginPage"><div class="login"><div style="font-weight:900;font-size:24px">TipTop <span style="color:#ff6b00">Vacation</span></div><p style="color:#64748b">CRM Department • Erbil</p>
-<label>Work Email</label><input id="loginUser" type="email" placeholder="name@tiptop.iq" style="margin:6px 0 12px">
-<label>Password</label><input id="loginPass" type="password" placeholder="Your password" style="margin:6px 0 14px">
-<button class="btn" style="width:100%" onclick="login()">Sign In</button><p id="loginErr" style="color:#dc2626;font-size:13px"></p>
-<p style="font-size:12px;color:#64748b">Use the email and password created for you in Supabase. If you don't have one, ask your admin.</p></div></div>
-
-<div id="app" class="hidden"><div class="top"><div class="logo">TipTop <em>Vacation</em></div><div style="color:#94a3b8;font-size:13px">CRM • 2026</div><div style="margin-left:auto;display:flex;gap:10px;align-items:center"><span id="who" style="font-weight:700"></span><button class="btn white" onclick="logout()">Log out</button></div></div>
-<div class="layout"><div class="side" id="menu"></div><main>
-<section id="p-dash"><h1 style="margin:0;font-size:26px" id="greet">Dashboard</h1><p style="color:#64748b" id="greetSub"></p>
-<div class="kpis"><div class="kpi"><div style="color:#64748b;font-size:13px">Annual Remaining</div><b id="kBal">—</b><div class="bar" style="margin-top:10px"><i id="kBar" style="width:50%"></i></div><div style="font-size:12px;color:#64748b;margin-top:6px" id="kDetail"></div></div>
-<div class="kpi"><div style="color:#64748b;font-size:13px">Eligible 2026</div><b id="kElig">—</b><div style="font-size:12px;color:#64748b">1.67 days / month</div></div>
-<div class="kpi"><div style="color:#64748b;font-size:13px">Taken Annual</div><b id="kTaken">—</b><div style="font-size:12px;color:#64748b">Full 1 • Half 0.5 • 1h 0.125</div></div>
-<div class="kpi"><div style="color:#64748b;font-size:13px">Status</div><b id="kStatus">—</b><div style="font-size:12px;color:#64748b" id="kHiring"></div></div></div>
-<div class="card"><b>How balance is calculated</b><p style="color:#475569;line-height:1.8;font-size:14px">Accrual: 20 days/year = 1.67/month, rounded down to nearest 0.5. Eligible = Accrued + 2025 carry-over − Taken Annual. Sick / Unpaid / Eid / Other are counted separately and do not reduce Annual.</p></div>
-<div class="card"><b>Approved Leaves</b><div id="upcoming"></div></div></section>
-
-<section id="p-request" class="hidden"><h1 style="margin:0">Request Leave</h1><p style="color:#64748b">Sent to admin for approval. It deducts only after approval.</p>
-<div class="card"><div class="grid2"><div><label>Leave Type</label><select id="rType"><option>Annual</option><option>Sick</option><option>Unpaid</option><option>Eid Holiday</option><option>Wedding</option><option>Paternity</option><option>Maternity</option><option>Bereavement</option></select></div><div><label>Duration</label><select id="rDur"><option>Full Day</option><option>Half Day</option><option>1 Hour</option><option>2 Hours</option><option>3 Hours</option></select></div><div><label>From</label><input id="rFrom" type="date" value="2026-11-12"></div><div><label>To</label><input id="rTo" type="date" value="2026-11-12"></div></div><label>Reason</label><textarea id="rNote" placeholder="Reason..." style="margin-top:6px"></textarea><div id="rWarn" style="margin:10px 0;font-size:13px"></div><button class="btn" onclick="submitRequest()">Submit Request</button></div>
-<div class="card"><b>My Requests</b><div id="myReq"></div></div></section>
-
-<section id="p-my" class="hidden"><h1 style="margin:0">My History</h1><div class="card" id="myHist"></div></section>
-<section id="p-bal" class="hidden"><h1 style="margin:0">CRM Balances</h1><p style="color:#64748b">Admin view only.</p><div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>HR ID</th><th>Name</th><th>Hiring</th><th>Status</th><th>Carry</th><th>Eligible</th><th>Taken</th><th>Remaining</th><th>Sick</th><th>Unpaid</th><th>Eid</th><th>Other</th></tr></thead><tbody id="balBody"></tbody></table></div></section>
-<section id="p-approvals" class="hidden"><h1 style="margin:0">Approvals</h1><div class="card" id="approvals"></div><div class="card"><b>Team Calendar</b><div id="calendar"></div></div></section>
-<section id="p-accounts" class="hidden"><h1 style="margin:0">Accounts</h1><p style="color:#64748b">Admin only. Create users in Supabase → Authentication → Users, with User Metadata: <code>hr_id</code> and <code>role</code>. They can then sign in with that email.</p>
-<div class="card"><b>Employees — attach email in Supabase</b><div id="accList" style="margin-top:10px"></div></div></section>
-</main></div></div>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TipTop — Ops Leave | Work Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box} :root{--navy:#0f2040;--navy2:#162d5a;--bg:#f4f5f8;--card:#fff;--line:#e5e7eb;--tx:#111827;--mu:#6b7280;--ac:#2563eb;--ok:#16a34a;--warn:#d97706;--no:#dc2626;--rose:#fff1f2}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+.serif{font-family:Fraunces,serif}
+a{color:var(--ac)} button{font:inherit;cursor:pointer;border:0}
+input,select,textarea{font:inherit;width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none;transition:.2s}
+input:focus,select:focus,textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px #2563eb22}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 1px 3px #00000008}
+.btn-primary{background:var(--navy);color:#fff;padding:11px 18px;border-radius:999px;font-weight:700;transition:.2s}.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px #0f204033}.btn-primary:disabled{opacity:.5;transform:none}
+.btn-ghost{background:#fff;border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-weight:600}.btn-ghost.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.small{font-size:12px;color:var(--mu)} .pill{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.pending{background:var(--warn)}.approved{background:var(--ok)}.rejected{background:var(--no)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.anim{animation:fadeUp .45s ease both}.anim2{animation:fadeUp .45s .08s ease both}.anim3{animation:fadeUp .45s .16s ease both}
+.skel{height:18px;border-radius:8px;background:linear-gradient(90deg,#eee 25%,#f8f8f8 50%,#eee 75%);background-size:800px 100%;animation:shimmer 1.2s infinite}
+.layout{display:flex;min-height:100vh}
+aside{width:250px;flex-shrink:0;background:var(--navy);color:#fff;padding:18px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.navbtn{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;color:#dbeafe;padding:11px 12px;border-radius:12px;font-weight:600}.navbtn.active{background:#fff;color:var(--navy)}
+main{flex:1;min-width:0;padding:22px;max-width:1180px;margin:0 auto;width:100%}
+header.top{position:sticky;top:0;z-index:20;background:#f4f5f8f2;backdrop-filter:blur(8px);padding:12px 0 14px;display:flex;gap:10px;align-items:center}
+table{width:100%;border-collapse:collapse}th{color:var(--mu);font-size:12px;text-align:left;padding:10px}td{padding:11px 10px;border-top:1px solid #f1f1f1;font-size:14px}
+.badge{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px}
+.modal{position:fixed;inset:0;background:#00000066;display:grid;place-items:center;z-index:50;padding:14px;animation:pop .25s ease}
+.modal>div{background:#fff;border-radius:22px;padding:22px;width:100%;max-width:540px;max-height:92vh;overflow:auto;animation:pop .3s ease}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111827;color:#fff;padding:12px 18px;border-radius:999px;font-size:14px;font-weight:600;z-index:99;animation:fadeUp .3s ease;box-shadow:0 10px 30px #0005}
+.stat{cursor:pointer;transition:.2s}.stat:hover{transform:translateY(-3px);box-shadow:0 12px 28px #00000012}
+.bar{height:10px;background:#eef2f7;border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#06b6d4);border-radius:999px;transition:width .7s ease}
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:16px;background:radial-gradient(800px 400px at 20% 0%,#1e3a6e33,transparent),linear-gradient(180deg,#0f2040,#162d5a)}
+.login-card{background:#fff;border-radius:26px;padding:28px;width:100%;max-width:420px;animation:pop .4s ease;box-shadow:0 24px 60px #00000030}
+@media(max-width:820px){aside{display:none}aside.open{display:flex;position:fixed;z-index:40;height:100vh}}
+.kpi-num{font-family:Fraunces,serif;font-size:34px;font-weight:900;line-height:1}
+</style></head>
+<body><div id="app"></div><div id="toast"></div>
 <script>
-const SB_URL="https://txbqpxrwqyjpotsmphxl.supabase.co";
-const SB_KEY="sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus-";
-const sb=window.supabase.createClient(SB_URL,SB_KEY);
-const TODAY=new Date("2026-11-10");
-const EMP=[
-{id:"ERB-293",name:"Soza Siyamand Mohammed",pos:"CRM Supervisor",hire:"2026-06-08",carry:0,elig:4.0,taken:4.5,sick:0,unpaid:0,eid:0,other:0,email:"soza.siyamand@tiptop.iq"},
-{id:"ERB-243",name:"Shakar Kamal Kanabi",pos:"CRM Team Leader",hire:"2025-06-15",carry:7,elig:11.1,taken:12.9,sick:0,unpaid:0,eid:0,other:5,email:"shakar.kamal@tiptop.iq"},
-{id:"ERB-216",name:"Haveen Tahir Hasso",pos:"CRM Specialist",hire:"2024-10-28",carry:6.5,elig:7.8,taken:15.8,sick:0,unpaid:0,eid:1,other:0,email:"haveen.tahir@tiptop.iq"},
-{id:"ERB-229",name:"Miran Rauf Ahmed",pos:"CRM Specialist",hire:"2024-12-24",carry:7,elig:9.0,taken:15.0,sick:0,unpaid:0,eid:1,other:0,email:"miran.rauf@tiptop.iq"},
-{id:"ERB-235",name:"Abdullah Azad Murad",pos:"CRM Specialist",hire:"2025-03-02",carry:9,elig:6.5,taken:19.5,sick:1,unpaid:0,eid:2,other:0,email:"abdullah.azad@tiptop.iq"},
-{id:"ERB-250",name:"Sami Saud Sami",pos:"CRM Specialist",hire:"2025-07-20",carry:3,elig:7.5,taken:12.5,sick:0,unpaid:0,eid:1,other:0,email:"sami.saud@tiptop.iq"},
-{id:"ERB-279",name:"Ali Rayd Ismael",pos:"CRM Specialist",hire:"2026-02-01",carry:0,elig:9.5,taken:6.0,sick:0,unpaid:0,eid:2,other:0,email:"ali.rayd@tiptop.iq"},
-{id:"ERB-291",name:"Iman Muwafaq Hayder",pos:"CRM Specialist",hire:"2026-04-18",carry:0,elig:0,taken:12.1,sick:0,unpaid:0,eid:0,other:2,email:"iman.muwafaq@tiptop.iq"},
-{id:"ERB-296",name:"Salam Sami Husamuldeen",pos:"CRM Specialist",hire:"2026-06-15",carry:0,elig:2.1,taken:5.9,sick:1,unpaid:1,eid:0,other:0,email:"salam.sami@tiptop.iq"},
-{id:"ERB-297",name:"Hajar Fakhir Karim",pos:"CRM Specialist",hire:"2026-06-21",carry:0,elig:3.6,taken:3.9,sick:0,unpaid:0,eid:0,other:0,email:"hajar.fakhir@tiptop.iq"},
-{id:"ERB-301",name:"Dilshad Baderkhan Mohyeldeen",pos:"CRM Specialist",hire:"2026-07-19",carry:0,elig:4.9,taken:1.1,sick:0,unpaid:0,eid:0,other:0,email:"dilshad.baderkhan@tiptop.iq"},
-{id:"ERB-304",name:"Yousif Kamaran Abdaljabar",pos:"CRM Specialist",hire:"2026-08-16",carry:0,elig:4.5,taken:0,sick:0,unpaid:0,eid:0,other:0,email:"yousif.kamaran@tiptop.iq"},
-{id:"ERB-305",name:"Bawar Muhyaldeen Othman",pos:"CRM Specialist",hire:"2026-08-17",carry:0,elig:4.5,taken:0,sick:0,unpaid:0,eid:0,other:0,email:"bawar.muhyaldeen@tiptop.iq"},
-{id:"ERB-308",name:"Twana Tariq Ahmed",pos:"CRM Specialist",hire:"2026-09-15",carry:0,elig:3.0,taken:0,sick:0,unpaid:0,eid:0,other:0,email:"twana.tariq@tiptop.iq"},
-{id:"ERB-307",name:"Omer Rizgar Yaseen",pos:"CRM Specialist",hire:"2026-09-15",carry:0,elig:3.0,taken:0,sick:1,unpaid:1,eid:0,other:0,email:"omer.rizgar@tiptop.iq"},
-{id:"ERB-310",name:"Mohammed Haydar Othman",pos:"CRM Specialist",hire:"2026-10-02",carry:0,elig:0,taken:0,sick:0,unpaid:0,eid:0,other:0,email:"mohammed.haydar@tiptop.iq"},
-];
-function statusOf(e){return (TODAY-new Date(e.hire))/86400000>90?"Passed":"Probation"}
-function accrual(e){let s=new Date(e.hire)>new Date("2026-01-01")?new Date(e.hire):new Date("2026-01-01");return Math.floor(((TODAY-s)/86400000/30*1.67)/0.5)*0.5}
-function getReqs(){try{return JSON.parse(localStorage.getItem("tiptop_vac_reqs")||"[]")}catch(e){return[]}}
-function setReqs(r){localStorage.setItem("tiptop_vac_reqs",JSON.stringify(r))}
-let current=null;
-async function login(){let email=document.getElementById("loginUser").value.trim().toLowerCase(),pw=document.getElementById("loginPass").value;
-let {data,error}=await sb.auth.signInWithPassword({email,password:pw});
-if(error){document.getElementById("loginErr").textContent="Sign-in failed: "+error.message;return}
-let meta=(data.user&&data.user.user_metadata)||{};let hr=meta.hr_id||meta.hrId||"";
-if(email==="shakar.kamal@tiptop.iq"||meta.role==="admin") hr="ERB-243";
-current=EMP.find(e=>e.id===hr);
-if(!current){document.getElementById("loginErr").textContent="Your Supabase account has no hr_id. Admin: set User Metadata hr_id for this user.";await sb.auth.signOut();return}
-document.getElementById("loginPage").classList.add("hidden");document.getElementById("app").classList.remove("hidden");render()}
-async function logout(){await sb.auth.signOut();current=null;document.getElementById("app").classList.add("hidden");document.getElementById("loginPage").classList.remove("hidden")}
-function isAdmin(){return current&&current.id==="ERB-243"}
-function show(id,btn){document.querySelectorAll("main section").forEach(s=>s.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");if(btn){document.querySelectorAll(".side button").forEach(b=>b.classList.remove("active"));btn.classList.add("active")}window.scrollTo(0,0)}
-function render(){let isA=isAdmin();document.getElementById("who").textContent=current.name+" • "+(isA?"Admin":"Employee");
-document.getElementById("menu").innerHTML=`<button class="active" onclick="show('p-dash',this)">Dashboard</button><button onclick="show('p-request',this)">Request Leave</button><button onclick="show('p-my',this)">My History</button>${isA?`<button onclick="show('p-bal',this)">CRM Balances</button><button onclick="show('p-approvals',this)">Approvals</button><button onclick="show('p-accounts',this)">Accounts</button>`:""}<div style="margin-top:16px;padding:12px;background:#f8fafc;border-radius:12px;font-size:12px;color:#64748b">${current.name}<br>${current.id} • ${current.pos}<br>Status: ${statusOf(current)}</div>`;
-document.getElementById("greet").textContent=isA?"CRM Vacation — Admin":"Welcome, "+current.name.split(" ")[0];
-document.getElementById("greetSub").textContent=isA?"You manage all CRM leave.":"Your balance is calculated exactly like the Google Sheet.";
-let rem=current.elig-current.taken;document.getElementById("kBal").textContent=rem.toFixed(1)+" days";document.getElementById("kBar").style.width=Math.max(0,Math.min(100,rem/20*100))+"%";document.getElementById("kDetail").textContent=`Eligible ${current.elig} − Taken ${current.taken} = ${rem.toFixed(1)} • Accrued ${accrual(current)} + Carry ${current.carry}`;
-document.getElementById("kElig").textContent=current.elig+" days";document.getElementById("kTaken").textContent=current.taken+" days";document.getElementById("kStatus").textContent=statusOf(current);document.getElementById("kHiring").textContent="Hired "+current.hire;
-let reqs=getReqs();document.getElementById("upcoming").innerHTML=reqs.filter(r=>r.status==="Approved").map(r=>`<div style="padding:8px 0;border-bottom:1px solid #f1f5f9">${r.name} — ${r.type} ${r.dur} — ${r.from} to ${r.to}</div>`).join("")||"<p style='color:#64748b'>No approved leaves yet.</p>";
-document.getElementById("myReq").innerHTML=reqs.filter(r=>r.id===current.id).map(r=>`<div style="padding:10px 0;border-bottom:1px solid #f1f5f9"><b>${r.type}</b> ${r.dur} — ${r.from} to ${r.to} — <span class="pill ${r.status}">${r.status}</span><br><span style="color:#64748b;font-size:13px">${r.note||""}</span></div>`).join("")||"<p style='color:#64748b'>No requests yet.</p>";
-document.getElementById("myHist").innerHTML=`<p>Taken Annual: <b>${current.taken}</b> • Sick: ${current.sick} • Unpaid: ${current.unpaid} • Eid: ${current.eid} • Other: ${current.other}</p>`;
-if(isA){document.getElementById("balBody").innerHTML=EMP.map(e=>{let r=e.elig-e.taken;return `<tr><td>${e.id}</td><td><b>${e.name}</b></td><td>${e.hire}</td><td><span class="pill ${statusOf(e)}">${statusOf(e)}</span></td><td>${e.carry}</td><td>${e.elig}</td><td>${e.taken}</td><td><b style="color:${r<0?"#dc2626":"#111827"}">${r.toFixed(1)}</b></td><td>${e.sick}</td><td>${e.unpaid}</td><td>${e.eid}</td><td>${e.other}</td></tr>`}).join("");
-document.getElementById("approvals").innerHTML=reqs.map((r,i)=>`<div style="padding:12px 0;border-bottom:1px solid #f1f5f9"><b>${r.name}</b> — ${r.type} ${r.dur} — ${r.from} to ${r.to} — <span class="pill ${r.status}">${r.status}</span><br>${r.status==="Pending"?`<button class="btn green" onclick="decide(${i},'Approved')">Approve</button> <button class="btn red" onclick="decide(${i},'Rejected')">Reject</button>`:""}</div>`).join("")||"<p style='color:#64748b'>No requests.</p>";
-document.getElementById("calendar").innerHTML=reqs.filter(r=>r.status==="Approved").map(r=>`<div>${r.from} — ${r.name} (${r.type})</div>`).join("")||"<p style='color:#64748b'>No approved leaves.</p>";
-document.getElementById("accList").innerHTML=EMP.map(e=>`<div style="padding:8px 0;border-bottom:1px solid #f1f5f9"><b>${e.name}</b> — ${e.id}<br><span style="color:#475569">${e.email}</span></div>`).join("");}}
-function submitRequest(){let type=document.getElementById("rType").value,dur=document.getElementById("rDur").value,from=document.getElementById("rFrom").value,to=document.getElementById("rTo").value,note=document.getElementById("rNote").value;let val={"Full Day":1,"Half Day":0.5,"1 Hour":0.125,"2 Hours":0.25,"3 Hours":0.375}[dur];let warn=document.getElementById("rWarn");if(type==="Annual"){let rem=current.elig-current.taken;warn.innerHTML=val>rem?`<b style="color:#dc2626">Exceeds balance (${rem.toFixed(1)} left).</b>`:`<span style="color:#16a34a">Within balance. After approval: ${(rem-val).toFixed(1)} left.</span>`}let reqs=getReqs();reqs.push({id:current.id,name:current.name,type,dur,from,to,note,status:"Pending"});setReqs(reqs);alert("Request sent to admin.");render()}
-function decide(i,st){let reqs=getReqs();reqs[i].status=st;if(st==="Approved"&&reqs[i].type==="Annual"){let e=EMP.find(x=>x.id===reqs[i].id);e.taken=+ (e.taken+{"Full Day":1,"Half Day":0.5,"1 Hour":0.125,"2 Hours":0.25,"3 Hours":0.375}[reqs[i].dur]).toFixed(3)}setReqs(reqs);render()}
+const $=s=>document.querySelector(s), app=$('#app');
+const CFG={url:"https://txbqpxrwqyjpotsmphxl.supabase.co",key:"sb_publishable__afAhZ3onmvXNwoOPJHY_g_QU5vvus-"};
+const sb=supabase.createClient(CFG.url,CFG.key);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('#toast');t.innerHTML=esc(m);t.className='toast';setTimeout(()=>t.className='',2600)};
+const fmtD=d=>d?new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+const daysBetween=(a,b)=>Math.round((new Date(b)-new Date(a))/86400000)+1;
+let me=null, employee=null, view='dashboard', employees=[], leaves=[], allLeaves=[];
+let filterCity='All', search='';
+
+function showLogin(){
+app.innerHTML=`<div class="login-wrap"><div class="login-card">
+<div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:Fraunces;font-size:24px;font-weight:900">O</div><div><b style="font-size:18px">Ops Leave</b><div class="small">TipTop • Operations Team</div></div></div>
+<h1 class="serif" style="font-size:32px;margin:18px 0 4px">Welcome back.</h1><p class="small">Sign in with your work email. Your vacations, balance and requests are linked automatically to your employee code.</p>
+<label class="small">Work email</label><input id="e" type="email" placeholder="you@tiptop.com" style="margin:6px 0 12px">
+<label class="small">Password</label><input id="p" type="password" placeholder="••••••••" style="margin:6px 0 16px">
+<button class="btn-primary" style="width:100%" id="si">Sign in →</button>
+<button class="btn-ghost" style="width:100%;margin-top:10px" id="su">Create my account</button>
+<p class="small" style="text-align:center;margin-top:14px">New employee? Create account with the <b style="color:#111">same email</b> your admin used. We link you by email or by your code (e.g. ERB-243).</p>
+<div class="small" id="msg" style="margin-top:10px;color:#dc2626"></div></div></div>`;
+$('#si').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; load();};
+$('#su').onclick=async()=>{const {data,error}=await sb.auth.signUp({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; toast(data.session?'Account created — welcome!':'Check your email to confirm, then sign in.'); if(data.session) load();};
+}
+async function load(){
+  const {data:{user}}=await sb.auth.getUser(); if(!user) return showLogin();
+  let {data:prof}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(!prof){ // auto-create profile if trigger didn't
+    await sb.from('profiles').insert({id:user.id,email:user.email,role:'viewer'}); prof={id:user.id,email:user.email,role:'viewer'};
+  }
+  me=prof;
+  // 1) Try link by email, 2) by auth_user_id
+  let {data:emp}=await sb.from('employees').select('*').or(`email.eq.${user.email},auth_user_id.eq.${user.id}`).maybeSingle();
+  employee=emp||null;
+  // If linked employee exists but not yet linked to auth, link it
+  if(employee && !employee.auth_user_id){ await sb.from('employees').update({auth_user_id:user.id}).eq('id',employee.id); }
+  if(!employee){ return showLinkCode(user); }
+  await refreshData(); shell();
+}
+function showLinkCode(user){
+app.innerHTML=`<div class="login-wrap"><div class="login-card anim">
+<h1 class="serif" style="font-size:28px">One last step ✨</h1><p>We found your login <b>${esc(user.email)}</b> but no employee record yet.</p>
+<p class="small">Enter the <b>employee code</b> your admin gave you — e.g. <b>ERB-243</b>. We will link your vacations & balance to you automatically.</p>
+<input id="code" placeholder="ERB-___" style="margin:12px 0;text-transform:uppercase">
+<button class="btn-primary" style="width:100%" id="link">Link my employee code →</button>
+<button class="btn-ghost" style="width:100%;margin-top:10px" id="skip">I don't have a code yet — continue</button>
+<p class="small" style="margin-top:12px">Ask your admin to create you in <b>Team → New employee</b> with this same email, or give you your code.</p>
+<div class="small" id="msg" style="color:#dc2626;margin-top:8px"></div></div></div>`;
+$('#link').onclick=async()=>{
+  const code=$('#code').value.trim().toUpperCase(); if(!code) return;
+  const {data:emp,error}=await sb.from('employees').select('*').eq('employee_code',code).maybeSingle();
+  if(error||!emp) return $('#msg').textContent='Code not found. Check with your admin — it must match exactly, e.g. ERB-243';
+  const {error:uErr}=await sb.from('employees').update({auth_user_id:user.id,email:user.email}).eq('id',emp.id);
+  if(uErr) return $('#msg').textContent=uErr.message;
+  toast('Linked! Your vacations are now showing.'); load();
+};
+$('#skip').onclick=()=>{ employee={full_name:user.email.split('@')[0],employee_code:'—',city:'Erbil',dept:'Ops',position:'Employee',status:'Active',carryover:0,accrual:0,taken:0,remaining:0}; refreshData().then(shell); };
+}
+async function refreshData(){
+  const q=await sb.from('employees').select('*').order('full_name'); employees=q.data||[];
+  const lq=await sb.from('leave_requests').select('*,employees(full_name,employee_code)').order('created_at',{ascending:false}); allLeaves=lq.data||[];
+  // My leaves: by employee_id if present, else by code/email
+  if(employee?.id) leaves=allLeaves.filter(x=>x.employee_id===employee.id||x.employee_code===employee.employee_code);
+  else leaves=[];
+}
+function balances(emp){
+  const carry=+emp.carryover||0, acc=+emp.accrual||0;
+  const taken=allLeaves.filter(x=>(x.employee_id===emp.id||x.employee_code===emp.employee_code)&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0);
+  const total=carry+acc, rem=Math.max(0,total-taken);
+  return {carry,acc,taken,total,rem, pct: total?Math.round(taken/total*100):0};
+}
+function shell(){
+  const b=employee?balances(employee):{carry:0,acc:0,taken:0,total:0,rem:0,pct:0};
+  const isAdmin=(me.role==='admin'||me.role==='hr');
+  const pending=allLeaves.filter(x=>x.status==='pending').length;
+  app.innerHTML=`<div class="layout">
+  <aside id="side"><div style="display:flex;gap:10px;align-items:center;padding:4px 6px 18px"><div style="width:38px;height:38px;border-radius:12px;background:#fff;color:var(--navy);display:grid;place-items:center;font-family:Fraunces;font-size:22px;font-weight:900">O</div><div><b>Ops Leave</b><div style="font-size:11px;color:#bfdbfe">Operations Team</div></div></div>
+  <button class="navbtn ${view==='dashboard'?'active':''}" data-v="dashboard">🏠 Dashboard</button>
+  <button class="navbtn ${view==='my'?'active':''}" data-v="my">🌴 My Vacations</button>
+  <button class="navbtn ${view==='team'?'active':''}" data-v="team">👥 Team ${isAdmin?'':'& Directory'}</button>
+  ${isAdmin?`<button class="navbtn ${view==='requests'?'active':''}" data-v="requests">✅ Requests ${pending?`<span class="badge" style="background:#f43f5e;color:#fff">${pending}</span>`:''}</button><button class="navbtn ${view==='newemp'?'active':''}" data-v="newemp">➕ New employee</button>`:''}
+  <div style="margin-top:auto" class="card anim" ><b style="color:#111">Coverage today</b><div class="small" style="color:#475569;margin-top:4px">${allLeaves.filter(x=>x.status==='approved'&&x.start_date<=new Date().toISOString().slice(0,10)&&x.end_date>=new Date().toISOString().slice(0,10)).length} people away • ${employees.length} in directory</div><button class="btn-primary" style="width:100%;margin-top:10px" data-v="team">View team</button></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:14px;padding:8px"><div style="width:36px;height:36px;border-radius:999px;background:#fff;color:var(--navy);display:grid;place-items:center;font-weight:900">${esc((employee?.full_name||me.email||'U')[0].toUpperCase())}</div><div style="min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(employee?.full_name||me.email)}</div><div style="font-size:11px;color:#bfdbfe">${esc(employee?.employee_code||'—')} • ${esc(me.role)}</div></div><button id="out" style="margin-left:auto;background:#ffffff22;color:#fff;padding:8px 10px;border-radius:999px">↗</button></div></aside>
+  <main>
+  <header class="top"><button class="btn-ghost" id="menu" style="display:none">☰</button><input id="search" placeholder="Search employees, leave type…" value="${esc(search)}" style="max-width:520px;border-radius:999px;padding-left:16px"><div class="small" style="margin-left:auto">${pending} pending</div><button class="btn-primary" id="newreq">+ New request</button></header>
+  <div id="view"></div></main></div>`;
+  document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{view=b.dataset.v; shell();});
+  $('#out').onclick=async()=>{await sb.auth.signOut(); location.reload();};
+  $('#newreq').onclick=()=>openRequestModal();
+  const sEl=$('#search'); sEl.oninput=()=>{search=sEl.value; renderView();};
+  renderView();
+}
+function renderView(){
+  const v=$('#view'); if(!v) return;
+  if(view==='dashboard') v.innerHTML=dashboardHTML();
+  if(view==='my') v.innerHTML=myHTML();
+  if(view==='team') v.innerHTML=teamHTML();
+  if(view==='requests') v.innerHTML=requestsHTML();
+  if(view==='newemp') v.innerHTML=newEmpHTML();
+  bindView();
+}
+function dashboardHTML(){
+  const b=balances(employee||{}); const myPending=leaves.filter(x=>x.status==='pending').length;
+  return `<div class="anim"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:end"><div><h1 class="serif" style="font-size:38px;margin:0">Hello, ${esc((employee?.full_name||'').split(' ')[0]||'there')} 👋</h1><p class="small">${esc(employee?.position||'Employee')} • ${esc(employee?.employee_code||'')} • ${esc(employee?.city||'')} • ${esc(employee?.dept||'')}</p></div><button class="btn-primary" onclick="document.getElementById('newreq').click()">+ New request</button></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:18px">
+  <div class="card stat anim" data-v="my"><div class="small">Remaining</div><div class="kpi-num">${b.rem} <span style="font-size:16px">days</span></div><div class="bar" style="margin-top:10px"><i style="width:${100-b.pct}%"></i></div><div class="small" style="margin-top:8px">${b.taken} taken of ${b.total} total</div></div>
+  <div class="card stat anim2"><div class="small">Taken</div><div class="kpi-num">${b.taken} <span style="font-size:16px">days</span></div><p class="small">Approved vacations this year</p></div>
+  <div class="card stat anim3"><div class="small">Carryover + Accrual</div><div class="kpi-num">${b.carry} + ${b.acc}</div><p class="small">Carryover ${b.carry} • Accrual ${b.acc}</p></div>
+  <div class="card stat anim3"><div class="small">My requests</div><div class="kpi-num">${leaves.length}</div><p class="small">${myPending} pending • ${leaves.filter(x=>x.status==='approved').length} approved</p></div></div>
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:14px" class="anim2">
+  <div class="card"><h3 style="margin:0">My vacations</h3><p class="small">Your approved & pending requests — automatically from your employee code.</p>${leaves.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid #f1f1f1"><span><b>${esc(x.leave_type)}</b> • ${fmtD(x.start_date)} – ${fmtD(x.end_date)} • ${daysBetween(x.start_date,x.end_date)}d</span><span class="pill ${x.status}">${x.status}</span></div>`).join('')||'<p class="small">No requests yet. Click + New request.</p>'}</div>
+  <div class="card"><h3 style="margin:0">Balance proof</h3><p style="background:#fefce8;border:1px solid #fde68a;padding:12px;border-radius:12px;font-size:13px">✅ <b>${esc(employee?.full_name||'')}: Carryover ${b.carry} + Accrual ${b.acc} − Taken ${b.taken} = Remaining ${b.rem}</b><br><span class="small">Remaining is already net of Taken. Total entitlement: ${b.total} days.</span></p><p class="small">Sick remaining: ${Math.max(0,10 - allLeaves.filter(x=>x.employee_id===employee?.id&&x.leave_type==='Sick'&&x.status==='approved').reduce((s,x)=>s+daysBetween(x.start_date,x.end_date),0))} days (example policy)</p></div></div></div>`;
+}
+function myHTML(){
+  const b=balances(employee||{});
+  return `<div class="anim"><h1 class="serif" style="font-size:36px;margin:0">My Vacations</h1><p class="small">Linked to <b>${esc(employee?.full_name||'')}</b> • Code <b>${esc(employee?.employee_code||'')}</b> • Remaining <b>${b.rem} days</b></p>
+  <div class="card" style="margin-top:16px"><table><tr><th>Type</th><th>Dates</th><th>Days</th><th>Status</th><th>Reason</th></tr>${leaves.map(x=>`<tr><td><b>${esc(x.leave_type)}</b></td><td>${fmtD(x.start_date)} – ${fmtD(x.end_date)}</td><td>${daysBetween(x.start_date,x.end_date)}</td><td><span class="pill ${x.status}">${x.status}</span></td><td>${esc(x.reason||'')}</td></tr>`).join('')||'<tr><td colspan=5>No vacations yet.</td></tr>'}</table></div></div>`;
+}
+function teamHTML(){
+  const list=employees.filter(e=>(filterCity==='All'||e.city===filterCity)&&((e.full_name+' '+e.employee_code+' '+(e.dept||'')).toLowerCase().includes(search.toLowerCase())));
+  return `<div class="anim"><h1 class="serif" style="font-size:36px;margin:0">Team Directory</h1><p class="small">${employees.length} people • Click a person to see their vacations & balance.</p>
+  <div style="display:flex;gap:8px;margin:14px 0;flex-wrap:wrap">${['All','Erbil','Mosul','Kirkuk','Duhok','Sulaymaniyah'].map(c=>`<button class="btn-ghost ${filterCity===c?'active':''}" data-city="${c}">${c}</button>`).join('')}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">${list.map(e=>{const bb=balances(e); return `<div class="card stat" data-emp="${e.id}"><div style="display:flex;justify-content:space-between"><b>${esc(e.full_name)}</b><span class="small">${esc(e.employee_code)}</span></div><div class="small">${esc(e.position||'')} • ${esc(e.city||'')} • ${esc(e.dept||'')}</div><div style="display:flex;gap:14px;margin-top:12px"><div><div class="small">Remaining</div><b style="font-size:20px">${bb.rem}d</b></div><div><div class="small">Taken</div><b>${bb.taken}d</b></div><div><div class="small">Total</div><b>${bb.total}d</b></div></div><div class="bar" style="margin-top:10px"><i style="width:${bb.total?Math.max(0,100-bb.pct):100}%"></i></div></div>`}).join('')||'<p>No employees match.</p>'}</div></div>`;
+}
+function requestsHTML(){
+  if(!(me.role==='admin'||me.role==='hr')) return `<p>Only admins see all requests. Your requests are in My Vacations.</p>`;
+  return `<div class="anim"><h1 class="serif" style="font-size:36px;margin:0">Requests</h1><p class="small">Approve or reject — balance updates automatically.</p>
+  <div class="card" style="margin-top:16px"><table><tr><th>Who</th><th>Type</th><th>Dates</th><th>Days</th><th>Status</th><th></th></tr>${allLeaves.map(x=>`<tr><td><b>${esc(x.employees?.full_name||x.employee_code||'—')}</b><div class="small">${esc(x.employees?.employee_code||'')}</div></td><td>${esc(x.leave_type)}</td><td>${fmtD(x.start_date)} – ${fmtD(x.end_date)}</td><td>${daysBetween(x.start_date,x.end_date)}</td><td><span class="pill ${x.status}">${x.status}</span></td><td>${x.status==='pending'?`<button class="btn-ghost" data-approve="${x.id}">Approve</button> <button class="btn-ghost" data-reject="${x.id}">Reject</button>`:''}</td></tr>`).join('')||'<tr><td colspan=6>No requests.</td></tr>'}</table></div></div>`;
+}
+function newEmpHTML(){
+  if(!(me.role==='admin'||me.role==='hr')) return `<p>Only admins can create employees.</p>`;
+  return `<div class="anim"><h1 class="serif" style="font-size:36px;margin:0">Create employee</h1><p class="small">Create the employee record first with his <b>name + code + email</b>. Then tell him: “Sign up in the app with this same email”. The system will <b>automatically link</b> him by email / code and show his vacations.</p>
+  <div class="card" style="margin-top:16px;max-width:680px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  <div><label class="small">Full name *</label><input id="n_name" placeholder="e.g. Shakar Kamal"></div>
+  <div><label class="small">Employee code *</label><input id="n_code" placeholder="ERB-243" style="text-transform:uppercase"></div>
+  <div><label class="small">Email * (for login)</label><input id="n_email" type="email" placeholder="name@tiptop.com"></div>
+  <div><label class="small">Position</label><input id="n_pos" placeholder="Driver / Ops"></div>
+  <div><label class="small">City</label><select id="n_city"><option>Erbil</option><option>Mosul</option><option>Kirkuk</option><option>Duhok</option><option>Sulaymaniyah</option></select></div>
+  <div><label class="small">Department</label><input id="n_dept" value="Ops"></div>
+  <div><label class="small">Carryover (days)</label><input id="n_carry" type="number" value="0"></div>
+  <div><label class="small">Accrual (days)</label><input id="n_acc" type="number" value="17"></div></div>
+  <label class="small">Temporary password to tell him (he can change later)</label><input id="n_pass" placeholder="e.g. TipTop2026!" style="margin-top:6px">
+  <button class="btn-primary" id="createEmp" style="width:100%;margin-top:16px">Create employee →</button>
+  <div class="small" id="cmsg" style="margin-top:10px"></div>
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:12px;margin-top:14px;font-size:13px"><b>How it works:</b> 1) You create him here → 2) He opens the site, clicks <b>Create my account</b> with that email + this password → 3) We auto-match his email / code → 4) He instantly sees his balance & vacations. No manual linking.</div></div></div>`;
+}
+function bindView(){
+  document.querySelectorAll('[data-city]').forEach(b=>b.onclick=()=>{filterCity=b.dataset.city; renderView();});
+  document.querySelectorAll('[data-emp]').forEach(b=>b.onclick=()=>{const e=employees.find(x=>x.id===b.dataset.emp); if(e) openEmpModal(e);});
+  document.querySelectorAll('[data-approve]').forEach(b=>b.onclick=async()=>{await sb.from('leave_requests').update({status:'approved',decided_by:me.id,decided_at:new Date().toISOString()}).eq('id',b.dataset.approve); toast('Approved ✅'); await refreshData(); renderView();});
+  document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=async()=>{await sb.from('leave_requests').update({status:'rejected',decided_by:me.id,decided_at:new Date().toISOString()}).eq('id',b.dataset.reject); toast('Rejected'); await refreshData(); renderView();});
+  const ce=$('#createEmp'); if(ce) ce.onclick=async()=>{
+    const name=$('#n_name').value.trim(), code=$('#n_code').value.trim().toUpperCase(), email=$('#n_email').value.trim();
+    if(!name||!code||!email) return $('#cmsg').textContent='Name, code and email are required.';
+    const {data,error}=await sb.from('employees').insert({full_name:name,employee_code:code,email,position:$('#n_pos').value, city:$('#n_city').value, dept:$('#n_dept').value, carryover:+$('#n_carry').value||0, accrual:+$('#n_acc').value||0, status:'Active'}).select().single();
+    if(error) return $('#cmsg').textContent=error.message;
+    // Try to create auth account in background - if email confirmation is on, employee can still sign up themselves with same email
+    toast(`Employee ${name} (${code}) created! Tell him to sign up with ${email}`);
+    $('#cmsg').innerHTML=`✅ Created <b>${esc(name)} — ${esc(code)}</b><br>Next: ask him to open the site and click <b>Create my account</b> with email <b>${esc(email)}</b> ${$('#n_pass').value?`and password <b>${esc($('#n_pass').value)}</b>`:''}. He will automatically see his vacations.`;
+    await refreshData(); 
+  };
+}
+function openEmpModal(e){
+  const b=balances(e); const hist=allLeaves.filter(x=>x.employee_id===e.id||x.employee_code===e.employee_code);
+  const m=document.createElement('div'); m.className='modal'; m.innerHTML=`<div><div style="display:flex;justify-content:space-between"><h2 class="serif" style="font-size:24px;margin:0">${esc(e.full_name)}</h2><button class="btn-ghost" id="cx">✕</button></div><p class="small">${esc(e.employee_code)} • ${esc(e.position||'')} • ${esc(e.city||'')} • ${esc(e.dept||'')}</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px"><div class="card"><div class="small">Remaining</div><b style="font-size:22px">${b.rem} days</b></div><div class="card"><div class="small">Taken</div><b style="font-size:22px">${b.taken} days</b></div><div class="card"><div class="small">Carryover</div><b>${b.carry} days</b></div><div class="card"><div class="small">Total entitlement</div><b>${b.total} days</b></div></div>
+  <h3 style="margin-top:16px">Leave history</h3>${hist.map(x=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #eee"><span>${esc(x.leave_type)} • ${fmtD(x.start_date)} – ${fmtD(x.end_date)}</span><span class="pill ${x.status}">${x.status}</span></div>`).join('')||'<p class="small">No leave history yet.</p>'}</div>`;
+  document.body.appendChild(m); m.onclick=e2=>{if(e2.target===m) m.remove()}; m.querySelector('#cx').onclick=()=>m.remove();
+}
+function openRequestModal(){
+  const b=employee?balances(employee):{rem:0};
+  const m=document.createElement('div'); m.className='modal'; m.innerHTML=`<div><div style="display:flex;justify-content:space-between"><div><h2 class="serif" style="font-size:26px;margin:0">Add request</h2><p class="small">${esc(employee?.full_name||'')} • ${esc(employee?.employee_code||'')} • Balance: ${b.rem} days remaining</p></div><button class="btn-ghost" id="cx">✕</button></div>
+  <label class="small">Type</label><select id="r_type" style="margin:6px 0"><option>Annual</option><option>Sick</option><option>Personal</option><option>Vacation</option></select>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="small">Start</label><input id="r_start" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div><label class="small">End</label><input id="r_end" type="date" value="${new Date().toISOString().slice(0,10)}"></div></div>
+  <label class="small">Note</label><textarea id="r_note" rows="2" placeholder="Handover / reason" style="margin-top:6px"></textarea>
+  <div id="r_val" style="background:#f8fafc;padding:12px;border-radius:12px;margin-top:10px;font-size:13px"></div>
+  <div style="display:flex;gap:8px;margin-top:14px"><button class="btn-ghost" style="flex:1" id="cancel">Cancel</button><button class="btn-primary" style="flex:1" id="save">Add request</button></div></div>`;
+  document.body.appendChild(m);
+  const upd=()=>{const s=$('#r_start').value, e=$('#r_end').value, need=s&&e?daysBetween(s,e):0; const overlap=leaves.some(x=>x.status!=='rejected'&&s<=x.end_date&&e>=x.start_date); $('#r_val').innerHTML=`${need>b.rem?'⛔ Insufficient balance — '+b.rem+' days remaining, need '+need:'✅ Balance OK — '+b.rem+' remaining, need '+need} <br>${overlap?'⛔ Overlapping request for you':'✅ No overlap'}`;};
+  ['r_start','r_end','r_type'].forEach(id=>document.getElementById(id).onchange=upd); upd();
+  m.querySelector('#cx').onclick=()=>m.remove(); m.querySelector('#cancel').onclick=()=>m.remove(); m.onclick=e2=>{if(e2.target===m) m.remove()};
+  m.querySelector('#save').onclick=async()=>{
+    if(!employee?.id) return toast('Link your employee code first.');
+    const s=$('#r_start').value, e=$('#r_end').value; if(!s||!e) return toast('Pick dates');
+    if(daysBetween(s,e)>b.rem) return toast('Not enough balance');
+    const {error}=await sb.from('leave_requests').insert({employee_id:employee.id,employee_code:employee.employee_code,leave_type:$('#r_type').value,start_date:s,end_date:e,reason:$('#r_note').value,status:'pending'});
+    if(error) return toast(error.message);
+    toast('Request sent — waiting for approval'); m.remove(); await refreshData(); renderView();
+  };
+}
+(async()=>{const {data:{session}}=await sb.auth.getSession(); session?load():showLogin();})();
 </script></body></html>
