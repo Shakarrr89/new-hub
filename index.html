@@ -50,17 +50,28 @@ let me=null, employee=null, view='dashboard', employees=[], leaves=[], allLeaves
 let filterCity='All', search='';
 
 function showLogin(){
-app.innerHTML=`<div class="login-wrap"><div class="login-card">
-<div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:Fraunces;font-size:24px;font-weight:900">O</div><div><b style="font-size:18px">Ops Leave</b><div class="small">TipTop • Operations Team</div></div></div>
-<h1 class="serif" style="font-size:32px;margin:18px 0 4px">Welcome back.</h1><p class="small">Sign in with your work email. Your vacations, balance and requests are linked automatically to your employee code.</p>
-<label class="small">Work email</label><input id="e" type="email" placeholder="you@tiptop.com" style="margin:6px 0 12px">
-<label class="small">Password</label><input id="p" type="password" placeholder="••••••••" style="margin:6px 0 16px">
-<button class="btn-primary" style="width:100%" id="si">Sign in →</button>
-<button class="btn-ghost" style="width:100%;margin-top:10px" id="su">Create my account</button>
-<p class="small" style="text-align:center;margin-top:14px">New employee? Create account with the <b style="color:#111">same email</b> your admin used. We link you by email or by your code (e.g. ERB-243).</p>
-<div class="small" id="msg" style="margin-top:10px;color:#dc2626"></div></div></div>`;
-$('#si').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; load();};
-$('#su').onclick=async()=>{const {data,error}=await sb.auth.signUp({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; toast(data.session?'Account created — welcome!':'Check your email to confirm, then sign in.'); if(data.session) load();};
+  // CODE-FIRST: code is REQUIRED before sign-in. Stored in sessionStorage.
+  const savedCode = sessionStorage.getItem('pendingCode')||'';
+  app.innerHTML=`<div class="login-wrap"><div class="login-card">
+  <div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:Fraunces;font-size:24px;font-weight:900">O</div><div><b style="font-size:18px">Ops Leave</b><div class="small">TipTop • Operations Team</div></div></div>
+  <h1 class="serif" style="font-size:30px;margin:18px 0 4px">Welcome back.</h1>
+  <p class="small"><b style="color:#111">Step 1 — Employee code is required.</b><br>Enter your code first (e.g. ERB-243). We link your vacations to this code. Without it you cannot sign in.</p>
+  <label class="small">Employee code *</label><input id="code" placeholder="ERB-___" value="${savedCode}" style="margin:6px 0 12px;text-transform:uppercase">
+  <label class="small">Work email</label><input id="e" type="email" placeholder="you@tiptop.com" style="margin:6px 0 12px">
+  <label class="small">Password</label><input id="p" type="password" placeholder="••••••••" style="margin:6px 0 16px">
+  <button class="btn-primary" style="width:100%" id="si">Sign in with my code →</button>
+  <button class="btn-ghost" style="width:100%;margin-top:10px" id="su">Create my account with this code</button>
+  <p class="small" style="text-align:center;margin-top:12px">Your code must already exist in the database (HR created all 24 Operations Team codes). If your code says "not found", ask HR to add you.</p>
+  <div class="small" id="msg" style="margin-top:10px;color:#dc2626"></div></div></div>`;
+  const getCode=()=>$('#code').value.trim().toUpperCase();
+  const checkCode=()=>{
+    const c=getCode();
+    if(!c) { $('#msg').textContent='Please enter your employee code first — it is required.'; return null; }
+    if(!c.startsWith('ERB-')) { $('#msg').textContent='Code must look like ERB-243. Check with HR.'; return null; }
+    sessionStorage.setItem('pendingCode', c); return c;
+  };
+  $('#si').onclick=async()=>{ if(!checkCode()) return; const {error}=await sb.auth.signInWithPassword({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; load(); };
+  $('#su').onclick=async()=>{ if(!checkCode()) return; const {data,error}=await sb.auth.signUp({email:$('#e').value.trim(),password:$('#p').value}); if(error) return $('#msg').textContent=error.message; toast(data.session?'Account created — linking your code…':'Check your email to confirm, then sign in with your code.'); if(data.session) load(); };
 }
 async function load(){
   const {data:{user}}=await sb.auth.getUser(); if(!user) return showLogin();
@@ -69,6 +80,29 @@ async function load(){
     await sb.from('profiles').insert({id:user.id,email:user.email,role:'viewer'}); prof={id:user.id,email:user.email,role:'viewer'};
   }
   me=prof;
+  // CODE-FIRST ENFORCEMENT: if user entered a code before sign-in, link THAT code to this login
+  const pendingCode = sessionStorage.getItem('pendingCode');
+  if(pendingCode){
+    const {data:codeEmp} = await sb.from('employees').select('*').eq('employee_code', pendingCode).maybeSingle();
+    if(!codeEmp){
+      sessionStorage.removeItem('pendingCode');
+      await sb.auth.signOut();
+      showLogin();
+      setTimeout(()=>{ const m=document.getElementById('msg'); if(m) m.textContent='Code '+pendingCode+' NOT FOUND in database. Ask HR to create you first — all 24 Operations codes are in the database.'; }, 100);
+      return;
+    }
+    if(codeEmp.auth_user_id && codeEmp.auth_user_id!==user.id){
+      sessionStorage.removeItem('pendingCode');
+      await sb.auth.signOut();
+      showLogin();
+      setTimeout(()=>{ const m=document.getElementById('msg'); if(m) m.textContent='Code '+pendingCode+' is already linked to another account ('+(codeEmp.email||'')+'). Ask HR to unlink it or give you your correct code.'; }, 100);
+      return;
+    }
+    // Link this code to this login + sync email
+    await sb.from('employees').update({auth_user_id:user.id, email:user.email}).eq('id', codeEmp.id);
+    employee = codeEmp; employee.auth_user_id = user.id; employee.email = user.email;
+    await refreshData(); shell(); return;
+  }
   // 1) Try link by email, 2) by auth_user_id
   let {data:emp}=await sb.from('employees').select('*').or(`email.eq.${user.email},auth_user_id.eq.${user.id}`).maybeSingle();
   employee=emp||null;
@@ -115,6 +149,11 @@ $('#skip').onclick=()=>{ employee={full_name:user.email.split('@')[0],employee_c
 async function refreshData(){
   const q=await sb.from('employees').select('*').order('full_name'); employees=q.data||[];
   const lq=await sb.from('leave_requests').select('*,employees(full_name,employee_code)').order('created_at',{ascending:false}); allLeaves=lq.data||[];
+  // PRIVACY: employee sees ONLY his own data in the UI. Admin sees everything.
+  if(!(me.role==='admin'||me.role==='hr')){
+    employees = employee ? [employee] : [];
+    allLeaves = allLeaves.filter(x=>x.employee_id===employee?.id || x.employee_code===employee?.employee_code);
+  }
   // My leaves: by employee_id if present, else by code/email
   if(employee?.id) leaves=allLeaves.filter(x=>x.employee_id===employee.id||x.employee_code===employee.employee_code);
   else leaves=[];
@@ -131,23 +170,30 @@ function shell(){
   const pending=allLeaves.filter(x=>x.status==='pending').length;
   app.innerHTML=`<div class="layout">
   <aside id="side"><div style="display:flex;gap:10px;align-items:center;padding:4px 6px 18px"><div style="width:38px;height:38px;border-radius:12px;background:#fff;color:var(--navy);display:grid;place-items:center;font-family:Fraunces;font-size:22px;font-weight:900">O</div><div><b>Ops Leave</b><div style="font-size:11px;color:#bfdbfe">Operations Team</div></div></div>
-  <button class="navbtn ${view==='dashboard'?'active':''}" data-v="dashboard">🏠 Dashboard</button>
+  ${isAdmin
+    ? `<button class="navbtn ${view==='dashboard'?'active':''}" data-v="dashboard">🏠 Dashboard</button>
   <button class="navbtn ${view==='my'?'active':''}" data-v="my">🌴 My Vacations</button>
-  <button class="navbtn ${view==='team'?'active':''}" data-v="team">👥 Team ${isAdmin?'':'& Directory'}</button>
-  ${isAdmin?`<button class="navbtn ${view==='requests'?'active':''}" data-v="requests">✅ Requests ${pending?`<span class="badge" style="background:#f43f5e;color:#fff">${pending}</span>`:''}</button><button class="navbtn ${view==='newemp'?'active':''}" data-v="newemp">➕ New employee</button>`:''}
-  <div style="margin-top:auto" class="card anim" ><b style="color:#111">Coverage today</b><div class="small" style="color:#475569;margin-top:4px">${allLeaves.filter(x=>x.status==='approved'&&x.start_date<=new Date().toISOString().slice(0,10)&&x.end_date>=new Date().toISOString().slice(0,10)).length} people away • ${employees.length} in directory</div><button class="btn-primary" style="width:100%;margin-top:10px" data-v="team">View team</button></div>
+  <button class="navbtn ${view==='team'?'active':''}" data-v="team">👥 Team</button>
+  <button class="navbtn ${view==='requests'?'active':''}" data-v="requests">✅ Requests ${pending?`<span class="badge" style="background:#f43f5e;color:#fff">${pending}</span>`:''}</button>
+  <button class="navbtn ${view==='newemp'?'active':''}" data-v="newemp">➕ New employee</button>`
+    : `<button class="navbtn ${view==='dashboard'?'active':''}" data-v="dashboard">🏠 My Home</button>
+  <button class="navbtn ${view==='my'?'active':''}" data-v="my">🌴 My Vacations</button>`}
+  ${isAdmin?`<div style="margin-top:auto" class="card anim" ><b style="color:#111">Coverage today</b><div class="small" style="color:#475569;margin-top:4px">${allLeaves.filter(x=>x.status==='approved'&&x.start_date<=new Date().toISOString().slice(0,10)&&x.end_date>=new Date().toISOString().slice(0,10)).length} people away • ${employees.length} in directory</div><button class="btn-primary" style="width:100%;margin-top:10px" data-v="team">View team</button></div>`
+  : `<div style="margin-top:auto" class="card anim"><b style="color:#111">Need help?</b><div class="small" style="color:#475569;margin-top:4px">Ask HR for your code or balance. You only see your own vacations.</div></div>`}
   <div style="display:flex;gap:8px;align-items:center;margin-top:14px;padding:8px"><div style="width:36px;height:36px;border-radius:999px;background:#fff;color:var(--navy);display:grid;place-items:center;font-weight:900">${esc((employee?.full_name||me.email||'U')[0].toUpperCase())}</div><div style="min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(employee?.full_name||me.email)}</div><div style="font-size:11px;color:#bfdbfe">${esc(employee?.employee_code||'—')} • ${esc(me.role)}</div></div><button id="out" style="margin-left:auto;background:#ffffff22;color:#fff;padding:8px 10px;border-radius:999px">↗</button></div></aside>
   <main>
-  <header class="top"><button class="btn-ghost" id="menu" style="display:none">☰</button><input id="search" placeholder="Search employees, leave type…" value="${esc(search)}" style="max-width:520px;border-radius:999px;padding-left:16px"><div class="small" style="margin-left:auto">${pending} pending</div><button class="btn-primary" id="newreq">+ New request</button></header>
+  <header class="top"><button class="btn-ghost" id="menu" style="display:none">☰</button>${isAdmin?`<input id="search" placeholder="Search employees, leave type…" value="${esc(search)}" style="max-width:520px;border-radius:999px;padding-left:16px"><div class="small" style="margin-left:auto">${pending} pending</div>`:`<div class="small" style="margin-left:auto">Your balance: <b style="color:#111">${balances(employee||{}).rem} days left</b></div>`}<button class="btn-primary" id="newreq">+ New request</button></header>
   <div id="view"></div></main></div>`;
   document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{view=b.dataset.v; shell();});
   $('#out').onclick=async()=>{await sb.auth.signOut(); location.reload();};
   $('#newreq').onclick=()=>openRequestModal();
-  const sEl=$('#search'); sEl.oninput=()=>{search=sEl.value; renderView();};
+  const sEl=$('#search'); if(sEl) sEl.oninput=()=>{search=sEl.value; renderView();};
   renderView();
 }
 function renderView(){
   const v=$('#view'); if(!v) return;
+  const _isAdmin=(me.role==='admin'||me.role==='hr');
+  if(!_isAdmin && (view==='team'||view==='requests'||view==='newemp')){ view='my'; }
   if(view==='dashboard') v.innerHTML=dashboardHTML();
   if(view==='my') v.innerHTML=myHTML();
   if(view==='team') v.innerHTML=teamHTML();
