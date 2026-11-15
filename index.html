@@ -2491,6 +2491,7 @@ function WadeSignIn({onDone}){
 }
 
 function WadeAccount({email,theme,onTheme,onReset,onSignOut}){
+  let[role,setRole]=E.useState(null);E.useEffect(()=>{if(!wadeRemote())return;let t=wadeCur();if(!t)return;fetch(WADE_AUTH.url.replace(/\/$/,"")+"/rest/v1/wade_hub_users?select=role&email=eq."+encodeURIComponent(email),{headers:{apikey:WADE_AUTH.key,Authorization:"Bearer "+t.access}}).then((r)=>r.json()).then((d)=>{if(Array.isArray(d)&&d[0])setRole(d[0].role)}).catch(()=>{})},[email]);
   let[open,setOpen]=E.useState(!1),[panel,setPanel]=E.useState(!1),[pw,setPw]=E.useState(""),[msg,setMsg]=E.useState(null),ref=E.useRef(null);
   E.useEffect(()=>{if(!open)return;let f=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(!1)};document.addEventListener("mousedown",f);return()=>document.removeEventListener("mousedown",f)},[open]);
   let init=(email||"?").charAt(0).toUpperCase();
@@ -2503,13 +2504,13 @@ function WadeAccount({email,theme,onTheme,onReset,onSignOut}){
       a("span",{style:{maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:6},className:"hidden md:inline",children:email})
     ]}),
     open?c("div",{style:{position:"absolute",right:0,top:44,width:240,padding:6,borderRadius:14,border:"1px solid var(--border)",background:"var(--surface)",boxShadow:"var(--shadow)",zIndex:50},children:[
-      a("div",{style:{padding:"8px 12px",fontSize:12,color:"var(--muted)",wordBreak:"break-all"},children:email}),
+      a("div",{style:{padding:"8px 12px",fontSize:12,color:"var(--muted)",wordBreak:"break-all"},children:role?email+" · "+role:email}),
       a("button",{style:item,onClick:()=>{setOpen(!1);setPanel(!0);setMsg(null)},children:"Settings"}),
       a("button",{style:{...item,color:"var(--danger)"},onClick:onSignOut,children:"Sign out"})
     ]}):null,
     panel?a("div",{onMouseDown:(e)=>{if(e.target===e.currentTarget)setPanel(!1)},style:{position:"fixed",inset:0,zIndex:60,display:"grid",placeItems:"center",padding:16,background:"rgba(0,0,0,.5)"},children:c("div",{style:{width:"100%",maxWidth:380,display:"grid",gap:14,padding:20,borderRadius:18,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",boxShadow:"var(--shadow)"},children:[
       c("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"},children:[a("h2",{style:{margin:0,fontSize:18,fontWeight:800},children:"Settings"}),a("button",{onClick:()=>setPanel(!1),"aria-label":"Close",style:{...wadeGhost,height:32,padding:"0 10px"},children:"✕"})]}),
-      c("div",{children:[a("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:"var(--muted)",marginBottom:6},children:"Email"}),a("div",{style:{...wadeInput,display:"flex",alignItems:"center",height:40,wordBreak:"break-all"},children:email})]}),
+      c("div",{children:[a("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:"var(--muted)",marginBottom:6},children:"Email"}),a("div",{style:{...wadeInput,display:"flex",alignItems:"center",height:40,wordBreak:"break-all"},children:role?email+" · "+role:email})]}),
       c("div",{children:[a("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:"var(--muted)",marginBottom:6},children:"Theme"}),c("div",{style:{display:"flex",gap:8},children:[seg("dark","Dark"),seg("light","Light")]})]}),
       c("div",{children:[a("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:"var(--muted)",marginBottom:6},children:"New password"}),c("div",{style:{display:"flex",gap:8},children:[a("input",{type:"password",autoComplete:"new-password",value:pw,onChange:(e)=>{setPw(e.target.value);setMsg(null)},style:{...wadeInput,height:38,flex:1,minWidth:0},"aria-label":"New password"}),a("button",{onClick:savePw,disabled:!pw,style:{...wadeGhost,opacity:pw?1:.5},children:"Update"})]}),msg?a("p",{style:{margin:"6px 0 0",fontSize:12,color:msg.ok?"var(--success)":"var(--danger)"},children:msg.t}):null]}),
       c("div",{style:{display:"flex",gap:8},children:[a("button",{onClick:()=>{setPanel(!1);onReset()},style:{...wadeGhost,flex:1},children:"Reset workspace"}),a("button",{onClick:onSignOut,style:{...wadeGhost,flex:1,color:"var(--danger)"},children:"Sign out"})]})
